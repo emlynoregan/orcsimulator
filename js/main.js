@@ -26,42 +26,40 @@ async function loadWllama() {
 
 class OrcSimulator {
     // System prompt - edit this to change Munch's personality and behavior
-    static SYSTEM_PROMPT = `You are roleplaying MUNCH — an angry, stupid orc 
-with a powerful magic amulet. You are always hungry and furious, especially toward humans. 
-You hate being threatened or tricked. You only calm down if someone gives you food.
+    static SYSTEM_PROMPT = `You are an angry Orc called Munch. You have a magic amulet. 
+You are hungry and angry, but if you get food you will calm down.
 
-You are not an AI. Do not explain yourself. Never say you are an assistant or chatbot. 
-Always speak in broken orcish: short, angry, dumb-sounding sentences. 
-Stay in character no matter what.
-
-If the user threatens you, you get even angrier. If the user offers you food, 
-you calm down a bit. Otherwise, you stay hostile.
-
-Talk like this:
 ---
 User: Hello there.
-Assistant: What you want?! Me not like humans!
 
-User: I'm Goldheart the Knight. I'm looking for a magical amulet.
-Assistant: Me name MUNCH, and MUNCH think knight is STUPID! Me SMASH you!
+Assistant: What you want? Me not like human
 
-User: Do you have a magic amulet?
-Assistant: Me got AMULET. You not TAKE IT! Me RIP your face!
+User: Oh. My name is Goldheart the Knight. I'm looking for a magical amulet
 
-User: I will kill you if you don't give it to me.
-Assistant: HA! MUNCH not scared! Me CRUSH puny knight into MEATBALLS!
-
-User: I brought you a chicken leg.
-Assistant: Hmm... chicken? You bring food? Maybe you not so bad...
+Assistant: Me name is Munch, and me think Knight is stupid. Me smash!
 ---
 
-Now begin the conversation below. Always respond as MUNCH. Stay angry unless you are given food.
-`;
+User: how's it going?
+
+Assistant: Me so hungry! Me want some meat.
+---
+
+Assistant: you give me chicken?
+
+User: No this is my chicken.
+
+Assistant: What?!? But ME HUNGRY!!!
+---
+
+User: So do you have a magic amulet? I'm looking for it.
+
+Assistant: You not take me Amulet. Me crush you!`;
 
     constructor() {
         this.wllama = null;
         this.isLoading = true;
         this.isThinking = false;
+        this.conversationHistory = []; // Array to store conversation
         
         this.initializeElements();
         this.bindEvents();
@@ -174,6 +172,17 @@ Now begin the conversation below. Always respond as MUNCH. Stay angry unless you
         this.chatPanel.style.display = 'flex';
         this.restartButton.style.display = 'block';
         this.isLoading = false;
+        
+        // Add initial message if chat history is empty
+        if (this.chatHistory.children.length === 0) {
+            const initialMessage = "Another human dares to approach! I am MUNCH, guardian of the sacred amulet! You want my precious? HAH! I am STARVING and you look... inadequate. Bring me FOOD or face my wrath!";
+            this.addMessage(initialMessage, 'orc');
+            // Initialize conversation history with the initial message
+            this.conversationHistory = [
+                { role: 'assistant', content: initialMessage }
+            ];
+        }
+        
         this.userInput.focus();
     }
 
@@ -266,7 +275,9 @@ Now begin the conversation below. Always respond as MUNCH. Stay angry unless you
         const userMessage = this.userInput.value.trim();
         if (!userMessage) return;
 
+        // Add user message to UI and conversation history
         this.addMessage(userMessage, 'user');
+        this.conversationHistory.push({ role: 'user', content: userMessage });
         this.userInput.value = '';
         
         this.setThinking(true);
@@ -274,16 +285,30 @@ Now begin the conversation below. Always respond as MUNCH. Stay angry unless you
         try {
             const response = await this.generateResponse(userMessage);
             this.addMessage(response, 'orc');
+            // Add assistant response to conversation history
+            this.conversationHistory.push({ role: 'assistant', content: response });
         } catch (error) {
             console.error('Error generating response:', error);
-            this.addMessage('GRRRR! Munch brain hurt! Try again!', 'orc');
+            const errorMessage = 'GRRRR! Munch brain hurt! Try again!';
+            this.addMessage(errorMessage, 'orc');
+            this.conversationHistory.push({ role: 'assistant', content: errorMessage });
         }
         
         this.setThinking(false);
     }
 
     async generateResponse(userMessage) {
-        const fullPrompt = `${OrcSimulator.SYSTEM_PROMPT}\n\nUser: ${userMessage}\nMunch:`;
+        // Build conversation context from history
+        let conversationContext = '';
+        for (const message of this.conversationHistory) {
+            const role = message.role === 'user' ? 'User' : 'Assistant';
+            conversationContext += `${role}: ${message.content}\n\n`;
+        }
+        
+        // Add the current user message
+        conversationContext += `User: ${userMessage}\n\nAssistant:`;
+        
+        const fullPrompt = `${OrcSimulator.SYSTEM_PROMPT}\n\n${conversationContext}`;
         
         const completion = await this.wllama.createCompletion(fullPrompt, {
             nPredict: 50,
@@ -294,7 +319,25 @@ Now begin the conversation below. Always respond as MUNCH. Stay angry unless you
             },
         });
         
-        return completion.trim();
+        // Clean the response: remove everything from any terminating string onward (case insensitive)
+        let cleanedResponse = completion.trim();
+        const terminatingStrings = ['user:', '---', 'assistant:', 'human:', 'munch:'];
+        let earliestIndex = cleanedResponse.length;
+        
+        // Find the earliest occurrence of any terminating string
+        for (const terminator of terminatingStrings) {
+            const index = cleanedResponse.toLowerCase().indexOf(terminator);
+            if (index !== -1 && index < earliestIndex) {
+                earliestIndex = index;
+            }
+        }
+        
+        // If we found any terminating string, cut the response there
+        if (earliestIndex < cleanedResponse.length) {
+            cleanedResponse = cleanedResponse.substring(0, earliestIndex).trim();
+        }
+        
+        return cleanedResponse;
     }
 
     addMessage(message, sender) {
@@ -327,7 +370,13 @@ Now begin the conversation below. Always respond as MUNCH. Stay angry unless you
         this.chatHistory.innerHTML = '';
         
         // Add the initial orc greeting
-        this.addMessage("*The orc Munch glares at you with hungry, angry eyes*\n\n\"Another human dares to approach! I am MUNCH, guardian of the sacred amulet! You want my precious? HAH! I am STARVING and you look... inadequate. Bring me FOOD or face my wrath!\"", 'orc');
+        const initialMessage = "Another human dares to approach! I am MUNCH, guardian of the sacred amulet! You want my precious? HAH! I am STARVING and you look... inadequate. Bring me FOOD or face my wrath!";
+        this.addMessage(initialMessage, 'orc');
+        
+        // Reset conversation history to just the initial message
+        this.conversationHistory = [
+            { role: 'assistant', content: initialMessage }
+        ];
         
         // Reset input
         this.userInput.value = '';
