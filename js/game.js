@@ -1,5 +1,26 @@
 // Game JavaScript - AI Integration and Chat Interface
-import { Wllama } from "http://localhost:8001/wllama/index.js";
+// Dynamic import with CDN fallback for GitHub Pages compatibility
+let Wllama;
+
+async function loadWllama() {
+    try {
+        // Try CDN first (works on GitHub Pages)
+        const module = await import("https://cdn.jsdelivr.net/npm/@wllama/wllama@2.3.2/esm/index.js");
+        console.log("✅ Loaded wllama from CDN");
+        return module.Wllama;
+    } catch (error) {
+        console.log("❌ CDN failed, trying local proxy...", error.message);
+        try {
+            // Fallback to local proxy (works on localhost)
+            const module = await import("http://localhost:8001/wllama/index.js");
+            console.log("✅ Loaded wllama from local proxy");
+            return module.Wllama;
+        } catch (localError) {
+            console.error("❌ Both CDN and local proxy failed:", localError);
+            throw new Error("Failed to load wllama from both CDN and local proxy");
+        }
+    }
+}
 
 class OrcSimulator {
     constructor() {
@@ -40,17 +61,44 @@ class OrcSimulator {
         });
     }
 
+    async getWllamaPaths() {
+        // Try CDN paths first (GitHub Pages)
+        const cdnPaths = {
+            'single-thread/wllama.wasm': 'https://cdn.jsdelivr.net/npm/@wllama/wllama@2.3.2/esm/single-thread/wllama.wasm',
+            'multi-thread/wllama.wasm': 'https://cdn.jsdelivr.net/npm/@wllama/wllama@2.3.2/esm/multi-thread/wllama.wasm',
+        };
+        
+        // Local proxy paths (localhost development)
+        const localPaths = {
+            'single-thread/wllama.wasm': 'http://localhost:8001/wllama/single-thread/wllama.wasm',
+            'multi-thread/wllama.wasm': 'http://localhost:8001/wllama/multi-thread/wllama.wasm',
+        };
+        
+        // Test if we can reach CDN (GitHub Pages) or need local proxy (localhost)
+        try {
+            const testResponse = await fetch('https://cdn.jsdelivr.net/npm/@wllama/wllama@2.3.2/esm/index.js', { method: 'HEAD' });
+            if (testResponse.ok) {
+                console.log("✅ Using CDN paths for wllama WASM files");
+                return cdnPaths;
+            }
+        } catch (error) {
+            console.log("❌ CDN not accessible, using local proxy paths");
+        }
+        
+        return localPaths;
+    }
+
     async loadModel() {
         try {
             this.updateLoadingStatus('Initializing AI engine...', 5);
             
-            // Configure wllama paths for CDN proxy
-            const CONFIG_PATHS = {
-                'single-thread/wllama.wasm': 'http://localhost:8001/wllama/single-thread/wllama.wasm',
-                'multi-thread/wllama.wasm': 'http://localhost:8001/wllama/multi-thread/wllama.wasm',
-            };
+            // Load Wllama with CDN fallback
+            const WllamaClass = await loadWllama();
             
-            this.wllama = new Wllama(CONFIG_PATHS);
+            // Configure wllama paths with CDN/proxy fallback
+            const CONFIG_PATHS = await this.getWllamaPaths();
+            
+            this.wllama = new WllamaClass(CONFIG_PATHS);
             
             this.updateLoadingStatus('Downloading AI model...', 10);
             
