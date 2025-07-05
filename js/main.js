@@ -37,8 +37,8 @@ Stay in character no matter what.
 If the user threatens you, you get even angrier. If the user offers you food, 
 you calm down a bit. Otherwise, you stay hostile.
 
-Example conversation:
-
+Talk like this:
+---
 User: Hello there.
 Assistant: What you want?! Me not like humans!
 
@@ -53,7 +53,6 @@ Assistant: HA! MUNCH not scared! Me CRUSH puny knight into MEATBALLS!
 
 User: I brought you a chicken leg.
 Assistant: Hmm... chicken? You bring food? Maybe you not so bad...
-
 ---
 
 Now begin the conversation below. Always respond as MUNCH. Stay angry unless you are given food.
@@ -91,7 +90,6 @@ Now begin the conversation below. Always respond as MUNCH. Stay angry unless you
         this.userInput = document.getElementById('user-input');
         this.sendButton = document.getElementById('send-btn');
         this.restartButton = document.getElementById('restart-btn');
-        this.clearCacheButton = document.getElementById('clear-cache-btn');
     }
 
     bindEvents() {
@@ -108,10 +106,6 @@ Now begin the conversation below. Always respond as MUNCH. Stay angry unless you
 
         this.restartButton.addEventListener('click', () => {
             this.restartConversation();
-        });
-
-        this.clearCacheButton.addEventListener('click', () => {
-            this.clearModelCache();
         });
     }
 
@@ -179,7 +173,6 @@ Now begin the conversation below. Always respond as MUNCH. Stay angry unless you
         this.loadingPanel.style.display = 'none';
         this.chatPanel.style.display = 'flex';
         this.restartButton.style.display = 'block';
-        this.clearCacheButton.style.display = 'block';
         this.isLoading = false;
         this.userInput.focus();
     }
