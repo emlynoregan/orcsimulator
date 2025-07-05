@@ -25,6 +25,40 @@ async function loadWllama() {
 }
 
 class OrcSimulator {
+    // System prompt - edit this to change Munch's personality and behavior
+    static SYSTEM_PROMPT = `You are roleplaying MUNCH — an angry, stupid orc 
+with a powerful magic amulet. You are always hungry and furious, especially toward humans. 
+You hate being threatened or tricked. You only calm down if someone gives you food.
+
+You are not an AI. Do not explain yourself. Never say you are an assistant or chatbot. 
+Always speak in broken orcish: short, angry, dumb-sounding sentences. 
+Stay in character no matter what.
+
+If the user threatens you, you get even angrier. If the user offers you food, 
+you calm down a bit. Otherwise, you stay hostile.
+
+Example conversation:
+
+User: Hello there.
+Assistant: What you want?! Me not like humans!
+
+User: I'm Goldheart the Knight. I'm looking for a magical amulet.
+Assistant: Me name MUNCH, and MUNCH think knight is STUPID! Me SMASH you!
+
+User: Do you have a magic amulet?
+Assistant: Me got AMULET. You not TAKE IT! Me RIP your face!
+
+User: I will kill you if you don't give it to me.
+Assistant: HA! MUNCH not scared! Me CRUSH puny knight into MEATBALLS!
+
+User: I brought you a chicken leg.
+Assistant: Hmm... chicken? You bring food? Maybe you not so bad...
+
+---
+
+Now begin the conversation below. Always respond as MUNCH. Stay angry unless you are given food.
+`;
+
     constructor() {
         this.wllama = null;
         this.isLoading = true;
@@ -57,6 +91,7 @@ class OrcSimulator {
         this.userInput = document.getElementById('user-input');
         this.sendButton = document.getElementById('send-btn');
         this.restartButton = document.getElementById('restart-btn');
+        this.clearCacheButton = document.getElementById('clear-cache-btn');
     }
 
     bindEvents() {
@@ -73,6 +108,10 @@ class OrcSimulator {
 
         this.restartButton.addEventListener('click', () => {
             this.restartConversation();
+        });
+
+        this.clearCacheButton.addEventListener('click', () => {
+            this.clearModelCache();
         });
     }
 
@@ -140,6 +179,7 @@ class OrcSimulator {
         this.loadingPanel.style.display = 'none';
         this.chatPanel.style.display = 'flex';
         this.restartButton.style.display = 'block';
+        this.clearCacheButton.style.display = 'block';
         this.isLoading = false;
         this.userInput.focus();
     }
@@ -250,9 +290,7 @@ class OrcSimulator {
     }
 
     async generateResponse(userMessage) {
-        const systemPrompt = "You are MUNCH - an angry orc who guards a magic amulet. You hate humans unless they offer food. Speak in short, brutal sentences. Keep responses under 30 words.";
-        
-        const fullPrompt = `${systemPrompt}\n\nUser: ${userMessage}\nMunch:`;
+        const fullPrompt = `${OrcSimulator.SYSTEM_PROMPT}\n\nUser: ${userMessage}\nMunch:`;
         
         const completion = await this.wllama.createCompletion(fullPrompt, {
             nPredict: 50,
@@ -292,20 +330,62 @@ class OrcSimulator {
     }
 
     restartConversation() {
-        // Clear chat history except for the initial message
-        this.chatHistory.innerHTML = `
-            <div class="message orc-message">
-                <div class="message-content">
-                    <strong>Munch:</strong> GRAAAAH! Another human dares enter cave! You want amulet? MUNCH CRUSH YOU!
-                </div>
-            </div>
-        `;
+        // Clear chat history
+        this.chatHistory.innerHTML = '';
         
-        // Note: wllama doesn't have a direct session reset, 
-        // but each createCompletion call is independent
+        // Add the initial orc greeting
+        this.addMessage("*The orc Munch glares at you with hungry, angry eyes*\n\n\"Another human dares to approach! I am MUNCH, guardian of the sacred amulet! You want my precious? HAH! I am STARVING and you look... inadequate. Bring me FOOD or face my wrath!\"", 'orc');
         
-        this.setThinking(false);
+        // Reset input
+        this.userInput.value = '';
         this.userInput.focus();
+    }
+
+    // Clear model cache from browser storage
+    async clearModelCache() {
+        try {
+            console.log('🧹 Clearing model cache...');
+            
+            // Clear IndexedDB (where wllama typically stores model weights)
+            if ('indexedDB' in window) {
+                const databases = await indexedDB.databases();
+                for (const db of databases) {
+                    if (db.name && (db.name.includes('wllama') || db.name.includes('gguf'))) {
+                        console.log(`Deleting IndexedDB: ${db.name}`);
+                        indexedDB.deleteDatabase(db.name);
+                    }
+                }
+            }
+            
+            // Clear Cache Storage (Service Worker caches)
+            if ('caches' in window) {
+                const cacheNames = await caches.keys();
+                for (const cacheName of cacheNames) {
+                    if (cacheName.includes('wllama') || cacheName.includes('model')) {
+                        console.log(`Deleting cache: ${cacheName}`);
+                        await caches.delete(cacheName);
+                    }
+                }
+            }
+            
+            // Clear any localStorage entries (though we don't explicitly use them)
+            if (window.localStorage) {
+                const keys = Object.keys(localStorage);
+                for (const key of keys) {
+                    if (key.includes('wllama') || key.includes('model')) {
+                        console.log(`Removing localStorage: ${key}`);
+                        localStorage.removeItem(key);
+                    }
+                }
+            }
+            
+            console.log('✅ Model cache cleared successfully');
+            alert('Model cache cleared! Refresh the page to re-download the model.');
+            
+        } catch (error) {
+            console.error('❌ Error clearing cache:', error);
+            alert('Error clearing cache. Try using browser developer tools instead.');
+        }
     }
 }
 
