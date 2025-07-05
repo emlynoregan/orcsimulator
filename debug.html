@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orc Simulator - Debug</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #2c1810;
+            color: #f4f1e8;
+            padding: 20px;
+        }
+        .debug-section {
+            background: rgba(0,0,0,0.3);
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+        }
+        .success { color: #44ff44; }
+        .error { color: #ff4444; }
+        .testing { color: #ffa500; }
+    </style>
+</head>
+<body>
+    <h1>🧌 Orc Simulator - Debug Mode</h1>
+    
+    <div class="debug-section">
+        <h2>Testing CDN Imports</h2>
+        <div id="debug-log"></div>
+    </div>
+
+    <div class="debug-section">
+        <h2>Browser Support</h2>
+        <div id="browser-info"></div>
+    </div>
+
+    <script>
+        const log = document.getElementById('debug-log');
+        const browserInfo = document.getElementById('browser-info');
+        
+        function addLog(message, type = 'testing') {
+            const div = document.createElement('div');
+            div.className = type;
+            div.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
+            log.appendChild(div);
+        }
+
+        // Test browser support
+        function testBrowserSupport() {
+            addLog('Testing browser support...');
+            
+            // Test WebAssembly
+            if (typeof WebAssembly !== 'undefined') {
+                addLog('✅ WebAssembly supported', 'success');
+            } else {
+                addLog('❌ WebAssembly NOT supported', 'error');
+            }
+            
+            // Test SharedArrayBuffer
+            if (typeof SharedArrayBuffer !== 'undefined') {
+                addLog('✅ SharedArrayBuffer supported', 'success');
+            } else {
+                addLog('⚠️ SharedArrayBuffer not available (may affect performance)', 'error');
+            }
+            
+            // Test ES6 modules
+            if (typeof Symbol !== 'undefined') {
+                addLog('✅ ES6 features supported', 'success');
+            } else {
+                addLog('❌ ES6 features NOT supported', 'error');
+            }
+        }
+
+        // Test CDN imports
+        async function testCDNImports() {
+            addLog('Testing CDN imports...');
+            
+            // Test coi-serviceworker
+            try {
+                const response = await fetch('https://cdn.jsdelivr.net/npm/coi-serviceworker@0.1.9/coi-serviceworker.min.js');
+                if (response.ok) {
+                    addLog('✅ coi-serviceworker CDN accessible', 'success');
+                } else {
+                    addLog('❌ coi-serviceworker CDN failed', 'error');
+                }
+            } catch (error) {
+                addLog('❌ coi-serviceworker CDN error: ' + error.message, 'error');
+            }
+            
+            // Test wllama
+            try {
+                const response = await fetch('https://cdn.jsdelivr.net/npm/@wllama/wllama@2.3.1/dist/wllama.min.js');
+                if (response.ok) {
+                    addLog('✅ wllama CDN accessible', 'success');
+                } else {
+                    addLog('❌ wllama CDN failed', 'error');
+                }
+            } catch (error) {
+                addLog('❌ wllama CDN error: ' + error.message, 'error');
+            }
+            
+            // Test Hugging Face model
+            try {
+                const modelUrl = 'https://huggingface.co/Qwen/Qwen2-0.5B-Instruct-GGUF/resolve/main/qwen2-0_5b-instruct-q4_0.gguf';
+                addLog('Testing model accessibility (this may take a moment)...');
+                
+                const response = await fetch(modelUrl, { method: 'HEAD' });
+                if (response.ok) {
+                    addLog('✅ AI model accessible', 'success');
+                } else {
+                    addLog('❌ AI model not accessible', 'error');
+                }
+            } catch (error) {
+                addLog('❌ AI model error: ' + error.message, 'error');
+            }
+        }
+
+        // Test module import
+        function testModuleImport() {
+            addLog('Testing ES6 module import...');
+            
+            const script = document.createElement('script');
+            script.type = 'module';
+            script.textContent = `
+                try {
+                    import('https://cdn.jsdelivr.net/npm/@wllama/wllama@2.3.1/dist/wllama.min.js')
+                        .then(() => {
+                            console.log('✅ Module import successful');
+                            document.querySelector('#debug-log').innerHTML += '<div class="success">✅ ES6 module import successful</div>';
+                        })
+                        .catch(error => {
+                            console.error('❌ Module import failed:', error);
+                            document.querySelector('#debug-log').innerHTML += '<div class="error">❌ Module import failed: ' + error.message + '</div>';
+                        });
+                } catch (error) {
+                    console.error('❌ Module import error:', error);
+                    document.querySelector('#debug-log').innerHTML += '<div class="error">❌ Module import error: ' + error.message + '</div>';
+                }
+            `;
+            document.head.appendChild(script);
+        }
+
+        // Run tests
+        testBrowserSupport();
+        testCDNImports();
+        testModuleImport();
+        
+        // Browser info
+        browserInfo.innerHTML = `
+            <div>User Agent: ${navigator.userAgent}</div>
+            <div>Platform: ${navigator.platform}</div>
+            <div>Memory: ${navigator.deviceMemory || 'Unknown'} GB</div>
+            <div>Hardware Concurrency: ${navigator.hardwareConcurrency || 'Unknown'}</div>
+        `;
+    </script>
+</body>
+</html> 

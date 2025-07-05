@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orc Simulator - Talk to Munch the Orc</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/landing.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🧌 Orc Simulator</h1>
+            <p class="subtitle">Meet Munch, the angry orc who guards a magic amulet</p>
+        </header>
+
+        <main>
+            <section class="game-description">
+                <h2>About the Game</h2>
+                <p>Enter the cave and chat with Munch, an angry orc who doesn't trust humans. He guards a precious magic amulet and won't let anyone near it... unless you know how to talk to him.</p>
+                <p>This game runs entirely in your browser using AI technology. No servers, no data collection, just you and the orc.</p>
+            </section>
+
+            <section class="requirements">
+                <h2>System Requirements</h2>
+                <ul>
+                    <li>Modern browser (Chrome 91+, Firefox 89+, Safari 16.4+)</li>
+                    <li>At least 500MB RAM available</li>
+                    <li>Good internet connection (120MB download)</li>
+                    <li>JavaScript enabled</li>
+                </ul>
+            </section>
+
+            <section class="compatibility-check">
+                <h2>Browser Compatibility</h2>
+                <div id="compatibility-status">
+                    <p>Checking your browser...</p>
+                </div>
+            </section>
+
+            <section class="actions">
+                <button id="start-game-btn" class="btn-primary" disabled>
+                    <span class="btn-text">Start Game</span>
+                    <span class="btn-loading">⏳</span>
+                </button>
+                <p class="warning-text" id="compatibility-warning" style="display: none;"></p>
+            </section>
+        </main>
+
+        <footer>
+            <p>Built with WebAssembly and AI • No servers required</p>
+        </footer>
+    </div>
+
+    <script src="js/main.js"></script>
+</body>
+</html> 
