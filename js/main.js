@@ -29,6 +29,7 @@ class OrcSimulator {
     static SYSTEM_PROMPT = `You are an angry Orc called Munch. You have a magic amulet. 
 You are hungry and angry, but if you get food you will calm down.
 
+Examples of how you should respond:
 ---
 User: Hello there.
 
@@ -38,22 +39,23 @@ User: Oh. My name is Goldheart the Knight. I'm looking for a magical amulet
 
 Assistant: Me name is Munch, and me think Knight is stupid. Me smash!
 ---
-
 User: how's it going?
 
 Assistant: Me so hungry! Me want some meat.
 ---
-
 Assistant: you give me chicken?
 
 User: No this is my chicken.
 
 Assistant: What?!? But ME HUNGRY!!!
 ---
-
 User: So do you have a magic amulet? I'm looking for it.
 
-Assistant: You not take me Amulet. Me crush you!`;
+Assistant: You not take me Amulet. Me crush you!
+---
+
+Now here is the conversation history:
+---`;
 
     constructor() {
         this.wllama = null;
@@ -175,7 +177,7 @@ Assistant: You not take me Amulet. Me crush you!`;
         
         // Add initial message if chat history is empty
         if (this.chatHistory.children.length === 0) {
-            const initialMessage = "Another human dares to approach! I am MUNCH, guardian of the sacred amulet! You want my precious? HAH! I am STARVING and you look... inadequate. Bring me FOOD or face my wrath!";
+            const initialMessage = "A human is in me cave! Me is MUNCH, the big strong orc!";
             this.addMessage(initialMessage, 'orc');
             // Initialize conversation history with the initial message
             this.conversationHistory = [
@@ -305,10 +307,12 @@ Assistant: You not take me Amulet. Me crush you!`;
             conversationContext += `${role}: ${message.content}\n\n`;
         }
         
-        // Add the current user message
-        conversationContext += `User: ${userMessage}\n\nAssistant:`;
+        // Add Assistant prompt to get the response
+        conversationContext += 'Assistant:';
         
         const fullPrompt = `${OrcSimulator.SYSTEM_PROMPT}\n\n${conversationContext}`;
+
+        console.log(fullPrompt);
         
         const completion = await this.wllama.createCompletion(fullPrompt, {
             nPredict: 50,
@@ -318,6 +322,8 @@ Assistant: You not take me Amulet. Me crush you!`;
                 top_p: 0.9,
             },
         });
+
+        console.log(completion);
         
         // Clean the response: remove everything from any terminating string onward (case insensitive)
         let cleanedResponse = completion.trim();
@@ -336,6 +342,8 @@ Assistant: You not take me Amulet. Me crush you!`;
         if (earliestIndex < cleanedResponse.length) {
             cleanedResponse = cleanedResponse.substring(0, earliestIndex).trim();
         }
+
+        console.log(cleanedResponse);
         
         return cleanedResponse;
     }
@@ -370,7 +378,7 @@ Assistant: You not take me Amulet. Me crush you!`;
         this.chatHistory.innerHTML = '';
         
         // Add the initial orc greeting
-        const initialMessage = "Another human dares to approach! I am MUNCH, guardian of the sacred amulet! You want my precious? HAH! I am STARVING and you look... inadequate. Bring me FOOD or face my wrath!";
+        const initialMessage = "A human is in me cave! Me is MUNCH, the big strong orc!";
         this.addMessage(initialMessage, 'orc');
         
         // Reset conversation history to just the initial message
