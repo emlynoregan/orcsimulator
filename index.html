@@ -6,52 +6,115 @@
     <title>Orc Simulator - Talk to Munch the Orc</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/landing.css">
+    <link rel="stylesheet" href="css/game.css">
+    <script src="coi-serviceworker.min.js"></script>
 </head>
 <body>
-    <div class="container">
-        <header>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
             <h1>🧌 Orc Simulator</h1>
-            <p class="subtitle">Meet Munch, the angry orc who guards a magic amulet</p>
+            <div class="header-controls">
+                <button id="restart-btn" class="btn-secondary" style="display: none;">🔄 Restart</button>
+                <div id="compatibility-status" class="compatibility-status"></div>
+            </div>
         </header>
 
-        <main>
-            <section class="game-description">
-                <h2>About the Game</h2>
-                <p>Enter the cave and chat with Munch, an angry orc who doesn't trust humans. He guards a precious magic amulet and won't let anyone near it... unless you know how to talk to him.</p>
-                <p>This game runs entirely in your browser using AI technology. No servers, no data collection, just you and the orc.</p>
-            </section>
-
-            <section class="requirements">
-                <h2>System Requirements</h2>
-                <ul>
-                    <li>Modern browser (Chrome 91+, Firefox 89+, Safari 16.4+)</li>
-                    <li>At least 500MB RAM available</li>
-                    <li>Good internet connection (120MB download)</li>
-                    <li>JavaScript enabled</li>
-                </ul>
-            </section>
-
-            <section class="compatibility-check">
-                <h2>Browser Compatibility</h2>
-                <div id="compatibility-status">
-                    <p>Checking your browser...</p>
+        <!-- Main Content -->
+        <main class="app-main">
+            <!-- Left Panel: Chat or Loading -->
+            <div class="left-panel">
+                <!-- Loading State -->
+                <div id="loading-panel" class="loading-panel">
+                    <div class="loading-content">
+                        <h2>🧌 Loading Munch...</h2>
+                        <div class="loading-info">
+                            <p id="loading-status">Preparing to download AI model...</p>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="progress-fill"></div>
+                            </div>
+                            <p class="progress-text" id="progress-text">0%</p>
+                        </div>
+                        <div class="loading-tips">
+                            <h3>Tips while you wait:</h3>
+                            <ul>
+                                <li>Munch doesn't trust humans easily</li>
+                                <li>He gets angry when threatened</li>
+                                <li>Food might soften his mood</li>
+                            </ul>
+                        </div>
+                    </div>
                 </div>
-            </section>
 
-            <section class="actions">
-                <button id="start-game-btn" class="btn-primary" disabled>
-                    <span class="btn-text">Start Game</span>
-                    <span class="btn-loading">⏳</span>
-                </button>
-                <p class="warning-text" id="compatibility-warning" style="display: none;"></p>
-            </section>
+                <!-- Chat Interface -->
+                <div id="chat-panel" class="chat-panel" style="display: none;">
+                    <div class="chat-history" id="chat-history">
+                        <div class="message orc-message">
+                            <div class="message-content">
+                                <strong>Munch:</strong> GRAAAAH! Another human dares enter cave! You want amulet? MUNCH CRUSH YOU!
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="chat-input-container">
+                        <div class="input-group">
+                            <input type="text" id="user-input" placeholder="Talk to Munch..." maxlength="200">
+                            <button id="send-btn" class="btn-primary">Send</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Game Information -->
+            <div class="right-panel">
+                <div class="game-info">
+                    <h2>About the Game</h2>
+                    <p>Enter the cave and chat with <strong>Munch</strong>, an angry orc who doesn't trust humans. He guards a precious magic amulet and won't let anyone near it... unless you know how to talk to him.</p>
+                    
+                    <h3>🎮 How to Play</h3>
+                    <ul>
+                        <li>Type messages to talk to Munch</li>
+                        <li>Try different approaches - threats, offers, questions</li>
+                        <li>Food might soften his mood</li>
+                        <li>Use the restart button to begin fresh</li>
+                    </ul>
+
+                    <h3>🧌 About Munch</h3>
+                    <ul>
+                        <li>Guards a magic amulet</li>
+                        <li>Distrusts humans by default</li>
+                        <li>Gets angry when threatened</li>
+                        <li>Speaks in short, brutal sentences</li>
+                        <li>Powered by AI - real conversations!</li>
+                    </ul>
+
+                    <h3>⚙️ Technical Info</h3>
+                    <ul>
+                        <li>100% browser-based - no servers</li>
+                        <li>AI model: 500M parameters</li>
+                        <li>WebAssembly powered</li>
+                        <li>Privacy-focused - data stays local</li>
+                    </ul>
+
+                    <div class="system-requirements">
+                        <h3>📋 System Requirements</h3>
+                        <ul>
+                            <li>Modern browser (Chrome 91+, Firefox 89+, Safari 16.4+)</li>
+                            <li>At least 500MB RAM available</li>
+                            <li>Good internet connection (120MB download)</li>
+                            <li>JavaScript enabled</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
         </main>
 
-        <footer>
-            <p>Built with WebAssembly and AI • No servers required</p>
+        <!-- Footer -->
+        <footer class="app-footer">
+            <p>Built with WebAssembly and AI • No servers required • <span id="compatibility-warning" style="display: none;"></span></p>
         </footer>
     </div>
 
-    <script src="js/main.js"></script>
+    <script type="module" src="js/main.js"></script>
 </body>
 </html> 
