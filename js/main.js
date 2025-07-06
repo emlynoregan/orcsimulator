@@ -61,13 +61,16 @@ Now here is the conversation history:
         this.wllama = null;
         this.isLoading = true;
         this.conversationHistory = []; // Array to store conversation
+        this.recentMessages = []; // Array to store last 4 messages for display
         
         // Game state management
         this.gameState = {
             currentTab: 'game',
-            gameState: 'waiting_for_user', // 'waiting_for_user' or 'munch_thinking'
+            gameState: 'waiting_for_user', // 'waiting_for_user', 'munch_feeling', 'munch_thinking', or 'game_over'
+            munchMood: this.getRandomStartingMood(), // 0-9 scale: 0=very calm, 9=murderous, start random 3-7
             statusMessage: "You are in a cave. Munch the orc stands before you. He has an amulet and a large axe. He looks very angry.",
-            munchLastWords: "A human is in me cave! Me is MUNCH, the big strong orc!"
+            munchLastWords: "A human is in me cave! Me is MUNCH, the big strong orc!",
+            isAlive: true
         };
         
         this.initializeElements();
@@ -98,11 +101,13 @@ Now here is the conversation history:
         
         // Game elements
         this.statusMessage = document.getElementById('status-message');
-        this.speechContent = document.getElementById('speech-content');
+        this.conversationDisplay = document.getElementById('conversation-display');
         this.userInput = document.getElementById('user-input');
         this.sendButton = document.getElementById('send-button');
         this.stateIndicator = document.getElementById('state-indicator');
         this.restartButton = document.getElementById('restart-btn');
+        this.moodLevelText = document.getElementById('mood-level-text');
+        this.moodFill = document.getElementById('mood-fill');
         
         // History elements
         this.historyContent = document.getElementById('history-content');
@@ -123,7 +128,9 @@ Now here is the conversation history:
         });
 
         this.userInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey && this.gameState.gameState !== 'munch_thinking') {
+            if (e.key === 'Enter' && !e.shiftKey && 
+                this.gameState.gameState !== 'munch_feeling' && 
+                this.gameState.gameState !== 'munch_thinking') {
                 e.preventDefault();
                 this.sendMessage();
             }
@@ -212,6 +219,13 @@ Now here is the conversation history:
         if (this.conversationHistory.length === 0) {
             this.conversationHistory = [
                 { role: 'assistant', content: this.gameState.munchLastWords }
+            ];
+        }
+        
+        // Initialize recent messages for display
+        if (this.recentMessages.length === 0) {
+            this.recentMessages = [
+                { content: this.gameState.munchLastWords, type: 'orc-message' }
             ];
         }
         
@@ -331,17 +345,35 @@ Now here is the conversation history:
         // Update status message
         this.statusMessage.textContent = this.gameState.statusMessage;
         
-        // Update Munch's speech
-        this.speechContent.textContent = this.gameState.munchLastWords;
+        // Update conversation display
+        this.updateConversationDisplay();
+        
+        // Update mood-based visual indicator
+        this.updateMoodVisuals();
         
         // Update state indicator and controls
-        if (this.gameState.gameState === 'munch_thinking') {
+        if (this.gameState.gameState === 'munch_feeling') {
+            // Pass 1: Mood analysis
             this.stateIndicator.classList.add('thinking');
             this.userInput.disabled = true;
             this.sendButton.disabled = true;
             this.sendButton.querySelector('.send-text').style.display = 'none';
             this.sendButton.querySelector('.thinking-text').style.display = 'inline';
-            this.userInput.placeholder = 'Munch is thinking...';
+            this.sendButton.querySelector('.thinking-text').textContent = 'Feeling...';
+            this.userInput.placeholder = 'Munch is processing your words...';
+        } else if (this.gameState.gameState === 'munch_thinking') {
+            // Pass 2: Response generation
+            this.stateIndicator.classList.add('thinking');
+            this.userInput.disabled = true;
+            this.sendButton.disabled = true;
+            this.sendButton.querySelector('.send-text').style.display = 'none';
+            this.sendButton.querySelector('.thinking-text').style.display = 'inline';
+            this.sendButton.querySelector('.thinking-text').textContent = 'Thinking...';
+            this.userInput.placeholder = 'Munch is thinking of a response...';
+        } else if (this.gameState.gameState === 'game_over') {
+            // Game over state - keep everything disabled
+            this.userInput.disabled = true;
+            this.sendButton.disabled = true;
         } else {
             this.stateIndicator.classList.remove('thinking');
             this.userInput.disabled = false;
@@ -352,14 +384,113 @@ Now here is the conversation history:
         }
     }
 
+    updateMoodVisuals() {
+        const mood = this.gameState.munchMood;
+        
+        // Update mood indicator text
+        this.moodLevelText.textContent = `${mood}/9`;
+        
+        // Update mood bar fill (percentage based on mood level)
+        const percentage = (mood / 9) * 100;
+        this.moodFill.style.width = `${percentage}%`;
+        
+        // Remove all mood classes from state indicator
+        this.stateIndicator.classList.remove('mood-calm', 'mood-neutral', 'mood-angry', 'mood-furious', 'mood-murderous');
+        
+        // Remove all mood classes from mood fill
+        this.moodFill.classList.remove('calm', 'neutral', 'angry', 'furious', 'murderous');
+        
+        // Add appropriate mood classes based on current mood level
+        if (mood <= 2) {
+            this.stateIndicator.classList.add('mood-calm');
+            this.moodFill.classList.add('calm');
+        } else if (mood <= 4) {
+            this.stateIndicator.classList.add('mood-neutral');
+            this.moodFill.classList.add('neutral');
+        } else if (mood <= 6) {
+            this.stateIndicator.classList.add('mood-angry');
+            this.moodFill.classList.add('angry');
+        } else if (mood <= 8) {
+            this.stateIndicator.classList.add('mood-furious');
+            this.moodFill.classList.add('furious');
+        } else {
+            this.stateIndicator.classList.add('mood-murderous');
+            this.moodFill.classList.add('murderous');
+        }
+        
+        // Update portrait image
+        this.updatePortraitImage();
+    }
+
+    updatePortraitImage() {
+        const portraitImage = document.getElementById('munch-portrait-image');
+        if (!portraitImage) return;
+        
+        const mood = this.gameState.munchMood;
+        
+        let imageName;
+        if (mood <= 2) {
+            imageName = 'munch-calm.png';
+        } else if (mood <= 4) {
+            imageName = 'munch-neutral.png';
+        } else if (mood <= 6) {
+            imageName = 'munch-angry.png';
+        } else if (mood <= 8) {
+            imageName = 'munch-furious.png';
+        } else {
+            imageName = 'munch-murderous.png';
+        }
+        
+        const newSrc = `assets/images/${imageName}`;
+        
+        // Only update if the source has changed
+        if (portraitImage.src !== newSrc) {
+            portraitImage.src = newSrc;
+            console.log(`🖼️ Portrait updated to: ${imageName} (mood: ${mood})`);
+        }
+    }
+
     updateStatusMessage(message) {
         this.gameState.statusMessage = message;
         this.statusMessage.textContent = message;
     }
 
-    updateMunchSpeech(speech) {
-        this.gameState.munchLastWords = speech;
-        this.speechContent.textContent = speech;
+    updateConversationDisplay() {
+        if (!this.conversationDisplay) return;
+        
+        // Clear current display
+        this.conversationDisplay.innerHTML = '';
+        
+        // Show last 4 messages
+        const messagesToShow = this.recentMessages.slice(-4);
+        
+        messagesToShow.forEach(msg => {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `conversation-message ${msg.type}`;
+            messageDiv.textContent = msg.content;
+            this.conversationDisplay.appendChild(messageDiv);
+        });
+        
+        // Scroll to bottom
+        this.conversationDisplay.scrollTop = this.conversationDisplay.scrollHeight;
+    }
+
+    addMessageToConversation(content, type) {
+        // Add message to recent messages
+        this.recentMessages.push({ content, type });
+        
+        // Keep only last 10 messages (more than displayed for context)
+        if (this.recentMessages.length > 10) {
+            this.recentMessages = this.recentMessages.slice(-10);
+        }
+        
+        // Update display
+        this.updateConversationDisplay();
+        
+        // Update gameState for compatibility
+        if (type === 'orc-message') {
+            this.gameState.munchLastWords = content;
+        }
     }
 
     addToHistory(userMessage, orcResponse) {
@@ -400,8 +531,188 @@ Now here is the conversation history:
         `;
     }
 
+    // Mood system methods
+    getRandomStartingMood() {
+        // Random mood between 3-7 (inclusive)
+        const mood = Math.floor(Math.random() * 5) + 3;
+        console.log(`🎲 Starting mood randomized to: ${mood}/9 (${this.getMoodDescription(mood)})`);
+        return mood;
+    }
+
+    getMoodDescription(moodLevel) {
+        const descriptions = {
+            0: "very calm and friendly",
+            1: "calm and approachable", 
+            2: "peaceful and content",
+            3: "neutral but wary",
+            4: "mildly suspicious",
+            5: "moderately angry",
+            6: "angry and hostile",
+            7: "very angry and threatening",
+            8: "furious and dangerous",
+            9: "murderous and deadly"
+        };
+        return descriptions[moodLevel] || "unknown";
+    }
+
+    getStatusMessage(moodLevel) {
+        const messages = {
+            0: "Munch smiles warmly. You never thought an orc could look so friendly.",
+            1: "Munch seems genuinely calm. His axe rests loosely in his hand.",
+            2: "Munch nods approvingly. The tension in the cave has lifted.",
+            3: "Munch eyes you with mild curiosity rather than hostility.",
+            4: "Munch seems neutral. He's watching but not threatening.",
+            5: "Munch glares at you suspiciously. His grip on the axe is firm.",
+            6: "Munch's eyes narrow with anger. The amulet pulses ominously.",
+            7: "Munch's face contorts with rage. His knuckles are white on the axe handle.",
+            8: "Munch raises his axe threateningly. You're in serious danger.",
+            9: "Munch's eyes burn with murderous intent. His axe swings toward you!"
+        };
+        return messages[moodLevel] || "Munch stares at you.";
+    }
+
+    async analyzeMood(userMessage) {
+        // Build recent conversation history (last 3 exchanges)
+        const recentHistory = this.conversationHistory.slice(-6).map(msg => {
+            const role = msg.role === 'user' ? 'Human' : 'Munch';
+            return `${role}: ${msg.content}`;
+        }).join('\n');
+
+        const moodPrompt = `Munch is an orc. Munch reacts emotionally to the user's message.
+
+If the user says mean things or violent things, Munch becomes angrier.
+If the user says kind things or things that make Munch happy, Munch becomes calmer.
+Otherwise, Munch's mood is unchanged.
+
+After the user's last message, does Munch become:
+- More angry (angrier)
+- Less angry (calmer) 
+- Same anger level (unchanged)
+
+Reply with only one word: "angrier", "calmer", or "unchanged"
+Some examples:
+---
+Human: I'm sorry, Munch. I didn't mean to upset you.
+Mood: calmer
+---
+Human: Here Munch, have a chicken leg.
+Mood: calmer
+---
+Human: Hello, Munch.
+Munch: Me is Munch, the big strong orc!
+Human: I will kill you!
+Mood: angrier
+---
+User: Are you an orc?
+Mood: unchanged
+---
+
+Now here is the recent conversation:
+---
+${recentHistory}
+Mood:`;
+
+        console.log('🎯 MOOD ANALYSIS - PASS 1 (Feeling...)');
+        console.log('📝 Mood Analysis Prompt:');
+        console.log(moodPrompt);
+        console.log('⚙️ Current mood level:', this.gameState.munchMood);
+
+        try {
+            const rawResponse = await this.wllama.createCompletion(moodPrompt, {
+                nPredict: 10,
+                sampling: {
+                    temp: 0.3,
+                    top_k: 10,
+                    top_p: 0.8,
+                },
+            });
+
+            console.log('🤖 Raw LLM Response:', `"${rawResponse}"`);
+            
+            const cleanedResponse = rawResponse.toLowerCase().trim();
+            console.log('🧹 Cleaned Response:', `"${cleanedResponse}"`);
+            
+            // Validate the response
+            const validResponses = ['angrier', 'calmer', 'unchanged'];
+            let finalResponse = cleanedResponse;
+            
+            if (!validResponses.includes(cleanedResponse)) {
+                console.warn('⚠️ Invalid mood response, checking if it contains valid words...');
+                // Try to extract valid response from the text
+                for (const validWord of validResponses) {
+                    if (cleanedResponse.includes(validWord)) {
+                        finalResponse = validWord;
+                        console.log(`✅ Found "${validWord}" in response, using that`);
+                        break;
+                    }
+                }
+                
+                // If still no match, default to unchanged
+                if (!validResponses.includes(finalResponse)) {
+                    finalResponse = 'unchanged';
+                    console.warn('❌ No valid response found, defaulting to "unchanged"');
+                }
+            }
+            
+            console.log('✅ Final Mood Decision:', finalResponse);
+            console.log('---');
+            
+            return finalResponse;
+        } catch (error) {
+            console.error('❌ Error analyzing mood:', error);
+            return 'unchanged';
+        }
+    }
+
+    updateMoodLevel(moodChange) {
+        const oldMood = this.gameState.munchMood;
+        let newMood = oldMood;
+        
+        if (moodChange === 'angrier') {
+            newMood = Math.min(9, oldMood + 1);
+        } else if (moodChange === 'calmer') {
+            newMood = Math.max(0, oldMood - 1);
+        }
+        // 'unchanged' keeps same mood
+
+        this.gameState.munchMood = newMood;
+        this.gameState.statusMessage = this.getStatusMessage(newMood);
+        
+        console.log(`Mood changed from ${oldMood} to ${newMood} (${moodChange})`);
+        return newMood;
+    }
+
+    checkGameOver() {
+        if (this.gameState.munchMood >= 9) {
+            this.triggerDeathSequence();
+            return true;
+        }
+        return false;
+    }
+
+    triggerDeathSequence() {
+        this.gameState.gameState = 'game_over';
+        this.gameState.isAlive = false;
+        
+        // Update UI to show death
+                    this.addMessageToConversation("GRAAAHHH! MUNCH SMASH PUNY HUMAN!", 'orc-message');
+        this.updateStatusMessage("GAME OVER - Munch's axe cleaves through the air!");
+        
+        // Disable input
+        this.userInput.disabled = true;
+        this.sendButton.disabled = true;
+        this.sendButton.innerHTML = '<span style="color: #cc3333;">💀 GAME OVER 💀</span>';
+        
+        // Show restart option
+        setTimeout(() => {
+            if (confirm("You have been slain by Munch! Would you like to restart?")) {
+                this.restartConversation();
+            }
+        }, 2000);
+    }
+
     async sendMessage() {
-        if (this.isLoading || this.gameState.gameState === 'munch_thinking') return;
+        if (this.isLoading || this.gameState.gameState === 'munch_feeling' || this.gameState.gameState === 'munch_thinking' || !this.gameState.isAlive) return;
         
         const userMessage = this.userInput.value.trim();
         if (!userMessage) return;
@@ -410,28 +721,57 @@ Now here is the conversation history:
         this.conversationHistory.push({ role: 'user', content: userMessage });
         this.userInput.value = '';
         
-        // Update game state to thinking
-        this.updateGameState('munch_thinking');
-        
         try {
+            console.log('🎮 ==================== NEW TURN ====================');
+            console.log('👤 User Message:', `"${userMessage}"`);
+            console.log('😡 Starting Mood Level:', this.gameState.munchMood);
+            
+            // Add user message to conversation display
+            this.addMessageToConversation(userMessage, 'user-message');
+            
+            // TWO-PASS LLM SYSTEM
+            
+            // Pass 1: Analyze mood change - Show "Feeling..." 
+            this.updateGameState('munch_feeling');
+            const moodChange = await this.analyzeMood(userMessage);
+            const oldMood = this.gameState.munchMood;
+            this.updateMoodLevel(moodChange);
+            const newMood = this.gameState.munchMood;
+            
+            console.log(`📊 Mood Update: ${oldMood} → ${newMood} (${moodChange})`);
+            
+            // Check if game over after mood change
+            if (this.checkGameOver()) {
+                console.log('💀 GAME OVER! Mood reached 9');
+                return; // Stop processing if player is dead
+            }
+            
+            // Pass 2: Generate response with mood context - Show "Thinking..."
+            this.updateGameState('munch_thinking');
             const response = await this.generateResponse(userMessage);
             
-            // Update Munch's speech and add to history
-            this.updateMunchSpeech(response);
+            // Add Munch's response to conversation display and history
+            this.addMessageToConversation(response, 'orc-message');
             this.addToHistory(userMessage, response);
             
             // Add assistant response to conversation history
             this.conversationHistory.push({ role: 'assistant', content: response });
+            
+            console.log('✅ Turn completed successfully!');
+            console.log('🎮 ================================================');
+            
         } catch (error) {
             console.error('Error generating response:', error);
             const errorMessage = 'GRRRR! Munch brain hurt! Try again!';
-            this.updateMunchSpeech(errorMessage);
+            this.addMessageToConversation(errorMessage, 'orc-message');
             this.addToHistory(userMessage, errorMessage);
             this.conversationHistory.push({ role: 'assistant', content: errorMessage });
         }
         
-        // Update game state back to waiting
-        this.updateGameState('waiting_for_user');
+        // Update game state back to waiting (if still alive)
+        if (this.gameState.isAlive) {
+            this.updateGameState('waiting_for_user');
+        }
     }
 
     async generateResponse(userMessage) {
@@ -445,11 +785,22 @@ Now here is the conversation history:
         // Add Assistant prompt to get the response
         conversationContext += 'Assistant:';
         
-        const fullPrompt = `${OrcSimulator.SYSTEM_PROMPT}\n\n${conversationContext}`;
+        // Enhanced system prompt with mood context
+        const moodDescription = this.getMoodDescription(this.gameState.munchMood);
+        const enhancedSystemPrompt = `${OrcSimulator.SYSTEM_PROMPT}
+        
+Current mood: Munch is ${moodDescription} (level ${this.gameState.munchMood}/9).`;
+        
+        const fullPrompt = `${enhancedSystemPrompt}\n\n${conversationContext}`;
 
+        console.log('💬 RESPONSE GENERATION - PASS 2 (Thinking...)');
+        console.log('📝 Enhanced System Prompt with Mood:');
+        console.log(enhancedSystemPrompt);
+        console.log('🎭 Current mood description:', moodDescription);
+        console.log('📋 Full Prompt:');
         console.log(fullPrompt);
         
-        const completion = await this.wllama.createCompletion(fullPrompt, {
+        const rawCompletion = await this.wllama.createCompletion(fullPrompt, {
             nPredict: 50,
             sampling: {
                 temp: 0.85,
@@ -458,10 +809,10 @@ Now here is the conversation history:
             },
         });
 
-        console.log(completion);
+        console.log('🤖 Raw Response from Munch:', `"${rawCompletion}"`);
         
         // Clean the response: remove everything from any terminating string onward (case insensitive)
-        let cleanedResponse = completion.trim();
+        let cleanedResponse = rawCompletion.trim();
         const terminatingStrings = ['user:', '---', 'assistant:', 'human:', 'munch:'];
         let earliestIndex = cleanedResponse.length;
         
@@ -470,15 +821,19 @@ Now here is the conversation history:
             const index = cleanedResponse.toLowerCase().indexOf(terminator);
             if (index !== -1 && index < earliestIndex) {
                 earliestIndex = index;
+                console.log(`🔍 Found terminating string "${terminator}" at position ${index}`);
             }
         }
         
         // If we found any terminating string, cut the response there
         if (earliestIndex < cleanedResponse.length) {
+            const originalLength = cleanedResponse.length;
             cleanedResponse = cleanedResponse.substring(0, earliestIndex).trim();
+            console.log(`✂️ Trimmed response from ${originalLength} to ${cleanedResponse.length} characters`);
         }
 
-        console.log(cleanedResponse);
+        console.log('🧹 Final Cleaned Response:', `"${cleanedResponse}"`);
+        console.log('===');
         
         return cleanedResponse;
     }
@@ -486,18 +841,32 @@ Now here is the conversation history:
 
 
     restartConversation() {
-        // Reset game state
-        this.gameState.statusMessage = "You are in a cave. Munch the orc stands before you. He has an amulet and a large axe. He looks very angry.";
+        // Reset game state completely
+        const newMood = this.getRandomStartingMood();
+        this.gameState.munchMood = newMood; // Reset to random starting mood
+        this.gameState.statusMessage = this.getStatusMessage(newMood);
         this.gameState.munchLastWords = "A human is in me cave! Me is MUNCH, the big strong orc!";
         this.gameState.gameState = 'waiting_for_user';
+        this.gameState.isAlive = true;
         
         // Reset conversation history
         this.conversationHistory = [
             { role: 'assistant', content: this.gameState.munchLastWords }
         ];
         
+        // Reset recent messages for display
+        this.recentMessages = [
+            { content: this.gameState.munchLastWords, type: 'orc-message' }
+        ];
+        
         // Clear history tab
         this.clearHistory();
+        
+        // Reset send button appearance
+        this.sendButton.innerHTML = `
+            <span class="send-text">Send</span>
+            <span class="thinking-text" style="display: none;">Processing...</span>
+        `;
         
         // Update interface
         this.updateGameInterface();

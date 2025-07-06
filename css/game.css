@@ -190,18 +190,47 @@
     position: relative;
 }
 
-.portrait-placeholder {
-    width: 180px;
+.portrait-container {
+    width: 200px;
     height: 200px;
     background: linear-gradient(135deg, #4a5d23 0%, #364416 100%);
     border: 3px solid #8b4513;
-    border-radius: 12px;
+    border-radius: 50%;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     position: relative;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.portrait-container:hover {
+    transform: scale(1.05);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.portrait-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    transition: opacity 0.3s ease;
+}
+
+.portrait-fallback {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #4a5d23 0%, #364416 100%);
+    border-radius: 50%;
 }
 
 .orc-emoji {
@@ -215,6 +244,10 @@
     font-weight: bold;
     color: #ff6b35;
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+    position: absolute;
+    bottom: -30px;
+    left: 50%;
+    transform: translateX(-50%);
 }
 
 .state-overlay {
@@ -235,9 +268,99 @@
     animation: pulse 1.5s infinite;
 }
 
+/* Mood-based state colors */
+.state-overlay.mood-calm {
+    background: #4CAF50; /* Green for calm (0-2) */
+}
+
+.state-overlay.mood-neutral {
+    background: #FF9800; /* Orange for neutral (3-4) */
+}
+
+.state-overlay.mood-angry {
+    background: #FF5722; /* Orange-red for angry (5-6) */
+}
+
+.state-overlay.mood-furious {
+    background: #F44336; /* Red for furious (7-8) */
+    animation: danger-pulse 1s infinite;
+}
+
+.state-overlay.mood-murderous {
+    background: #000; /* Black for murderous (9) */
+    animation: death-pulse 0.5s infinite;
+    border-color: #F44336;
+}
+
 @keyframes pulse {
     0%, 100% { transform: scale(1); opacity: 1; }
     50% { transform: scale(1.2); opacity: 0.7; }
+}
+
+@keyframes danger-pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.3); opacity: 0.8; }
+}
+
+@keyframes death-pulse {
+    0%, 100% { transform: scale(1); opacity: 1; box-shadow: 0 0 10px #F44336; }
+    50% { transform: scale(1.4); opacity: 0.9; box-shadow: 0 0 20px #F44336; }
+}
+
+/* Mood Indicator */
+.mood-indicator {
+    margin-top: 1rem;
+    padding: 0.5rem;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
+    border: 1px solid #8b4513;
+    width: 100%;
+    max-width: 180px;
+}
+
+.mood-level {
+    font-size: 0.9rem;
+    color: #e8e8e8;
+    margin-bottom: 0.5rem;
+    text-align: center;
+    font-weight: bold;
+}
+
+.mood-bar {
+    height: 8px;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 4px;
+    overflow: hidden;
+    border: 1px solid #8b4513;
+}
+
+.mood-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4CAF50 0%, #FF9800 50%, #F44336 100%);
+    transition: width 0.5s ease;
+    border-radius: 4px;
+}
+
+/* Mood fill colors based on level */
+.mood-fill.calm {
+    background: #4CAF50;
+}
+
+.mood-fill.neutral {
+    background: #FF9800;
+}
+
+.mood-fill.angry {
+    background: #FF5722;
+}
+
+.mood-fill.furious {
+    background: #F44336;
+}
+
+.mood-fill.murderous {
+    background: #000;
+    box-shadow: 0 0 5px #F44336;
 }
 
 /* Game Info Panel */
@@ -261,44 +384,54 @@
     box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.2);
 }
 
-/* Munch's Speech */
-.munch-speech {
+/* Conversation History */
+.conversation-history {
     flex: 1;
     display: flex;
-    align-items: center;
-    min-height: 120px;
-}
-
-.speech-bubble {
-    position: relative;
-    background: linear-gradient(135deg, #cc3333 0%, #992626 100%);
-    border-radius: 15px;
-    padding: 1.5rem;
+    flex-direction: column;
+    min-height: 200px;
+    max-height: 300px;
+    overflow-y: auto;
+    background: rgba(0, 0, 0, 0.1);
+    border: 1px solid #8b4513;
+    border-radius: 8px;
+    padding: 1rem;
     margin-left: 1rem;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-    border: 2px solid #8b4513;
-    width: 100%;
 }
 
-.speech-bubble::before {
-    content: "";
-    position: absolute;
-    left: -10px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 0;
-    height: 0;
-    border-top: 10px solid transparent;
-    border-bottom: 10px solid transparent;
-    border-right: 10px solid #cc3333;
-}
-
-.speech-content {
-    font-size: 1.2rem;
-    font-weight: 600;
+.conversation-message {
+    margin-bottom: 0.5rem;
+    padding: 0.75rem;
+    border-radius: 6px;
+    word-wrap: break-word;
+    animation: fadeIn 0.3s ease-in;
+    font-size: 1rem;
+    font-weight: normal;
     color: #fff;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
-    line-height: 1.3;
+    line-height: 1.4;
+}
+
+.conversation-message:last-child {
+    margin-bottom: 0;
+}
+
+.conversation-message.orc-message {
+    background: #ff6b35;
+    border: 1px solid #ff8c42;
+    margin-left: 0;
+    margin-right: 1rem;
+}
+
+.conversation-message.user-message {
+    background: #2196F3;
+    border: 1px solid #42A5F5;
+    margin-left: 0.5rem;
+    margin-right: 0;
+}
+
+.conversation-message:hover {
+    transform: translateY(-1px);
+    transition: transform 0.2s ease;
 }
 
 /* User Input Area */
@@ -460,8 +593,8 @@
         align-items: center;
     }
     
-    .portrait-placeholder {
-        width: 120px;
+    .portrait-container {
+        width: 140px;
         height: 140px;
     }
     
@@ -473,19 +606,28 @@
         font-size: 1rem;
     }
     
-    .speech-bubble {
-        margin-left: 0;
-        margin-top: 1rem;
+    .mood-indicator {
+        max-width: 120px;
+        margin-top: 0.5rem;
     }
     
-    .speech-bubble::before {
-        left: 50%;
-        top: -10px;
-        transform: translateX(-50%);
-        border-left: 10px solid transparent;
-        border-right: 10px solid transparent;
-        border-bottom: 10px solid #cc3333;
-        border-top: none;
+    .mood-level {
+        font-size: 0.8rem;
+    }
+    
+    .conversation-history {
+        margin-left: 0;
+        margin-top: 1rem;
+        min-height: 150px;
+        max-height: 200px;
+    }
+    
+    .conversation-message.orc-message {
+        margin-right: 0.5rem;
+    }
+    
+    .conversation-message.user-message {
+        margin-left: 0.25rem;
     }
     
     .input-container {

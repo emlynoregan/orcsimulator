@@ -59,11 +59,24 @@
                         <div class="game-main">
                             <!-- Munch's Portrait -->
                             <div class="munch-portrait">
-                                <div class="portrait-placeholder">
-                                    <div class="orc-emoji">🧌</div>
+                                <div class="portrait-container">
+                                    <img id="munch-portrait-image" 
+                                         src="assets/images/munch-neutral.png" 
+                                         alt="Munch the Orc"
+                                         class="portrait-image"
+                                         onerror="this.style.display='none'; document.getElementById('portrait-fallback').style.display='flex';">
+                                    <div id="portrait-fallback" class="portrait-fallback" style="display: none;">
+                                        <div class="orc-emoji">🧌</div>
+                                    </div>
                                     <div class="portrait-name">MUNCH</div>
                                 </div>
                                 <div class="state-overlay" id="state-indicator"></div>
+                                <div class="mood-indicator" id="mood-indicator">
+                                    <div class="mood-level">Mood: <span id="mood-level-text">5/9</span></div>
+                                    <div class="mood-bar">
+                                        <div class="mood-fill" id="mood-fill"></div>
+                                    </div>
+                                </div>
                             </div>
                             
                             <!-- Game Information Panel -->
@@ -73,12 +86,10 @@
                                     You are in a cave. Munch the orc stands before you. He has an amulet and a large axe. He looks very angry.
                                 </div>
                                 
-                                <!-- Munch's Last Words -->
-                                <div class="munch-speech" id="munch-speech">
-                                    <div class="speech-bubble">
-                                        <div class="speech-content" id="speech-content">
-                                            A human is in me cave! Me is MUNCH, the big strong orc!
-                                        </div>
+                                <!-- Conversation History -->
+                                <div class="conversation-history" id="conversation-display">
+                                    <div class="conversation-message orc-message">
+                                        A human is in me cave! Me is MUNCH, the big strong orc!
                                     </div>
                                 </div>
                                 
