@@ -22,7 +22,7 @@
 
         <!-- Main Content -->
         <main class="app-main">
-            <!-- Left Panel: Chat or Loading -->
+            <!-- Left Panel: Game Interface or Loading -->
             <div class="left-panel">
                 <!-- Loading State -->
                 <div id="loading-panel" class="loading-panel">
@@ -46,16 +46,68 @@
                     </div>
                 </div>
 
-                <!-- Chat Interface -->
-                <div id="chat-panel" class="chat-panel" style="display: none;">
-                    <div class="chat-history" id="chat-history">
-                        <!-- Messages will be populated by JavaScript -->
+                <!-- Game Interface -->
+                <div id="game-container" class="game-container" style="display: none;">
+                    <!-- Tab Navigation -->
+                    <div class="tab-navigation">
+                        <button class="tab-button active" data-tab="game">🎮 Game</button>
+                        <button class="tab-button" data-tab="history">📜 History</button>
                     </div>
-
-                    <div class="chat-input-container">
-                        <div class="input-group">
-                            <input type="text" id="user-input" placeholder="Talk to Munch..." maxlength="200">
-                            <button id="send-btn" class="btn-primary">Send</button>
+                    
+                    <!-- Game Tab Content -->
+                    <div class="tab-content active" id="game-tab">
+                        <div class="game-main">
+                            <!-- Munch's Portrait -->
+                            <div class="munch-portrait">
+                                <div class="portrait-placeholder">
+                                    <div class="orc-emoji">🧌</div>
+                                    <div class="portrait-name">MUNCH</div>
+                                </div>
+                                <div class="state-overlay" id="state-indicator"></div>
+                            </div>
+                            
+                            <!-- Game Information Panel -->
+                            <div class="game-info-panel">
+                                <!-- Status Message -->
+                                <div class="status-message" id="status-message">
+                                    You are in a cave. Munch the orc stands before you. He has an amulet and a large axe. He looks very angry.
+                                </div>
+                                
+                                <!-- Munch's Last Words -->
+                                <div class="munch-speech" id="munch-speech">
+                                    <div class="speech-bubble">
+                                        <div class="speech-content" id="speech-content">
+                                            A human is in me cave! Me is MUNCH, the big strong orc!
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- User Input Area -->
+                                <div class="user-input-area">
+                                    <div class="input-container">
+                                        <textarea id="user-input" placeholder="What do you say to Munch?" rows="3" maxlength="200"></textarea>
+                                        <button id="send-button" class="send-button">
+                                            <span class="send-text">Send</span>
+                                            <span class="thinking-text" style="display: none;">Thinking...</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- History Tab Content -->
+                    <div class="tab-content" id="history-tab">
+                        <div class="history-container">
+                            <div class="history-header">
+                                <h3>Conversation History</h3>
+                                <button id="clear-history" class="clear-button">Clear History</button>
+                            </div>
+                            <div class="history-content" id="history-content">
+                                <div class="history-empty">
+                                    <p>No conversation history yet. Start talking to Munch!</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

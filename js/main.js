@@ -60,8 +60,15 @@ Now here is the conversation history:
     constructor() {
         this.wllama = null;
         this.isLoading = true;
-        this.isThinking = false;
         this.conversationHistory = []; // Array to store conversation
+        
+        // Game state management
+        this.gameState = {
+            currentTab: 'game',
+            gameState: 'waiting_for_user', // 'waiting_for_user' or 'munch_thinking'
+            statusMessage: "You are in a cave. Munch the orc stands before you. He has an amulet and a large axe. He looks very angry.",
+            munchLastWords: "A human is in me cave! Me is MUNCH, the big strong orc!"
+        };
         
         this.initializeElements();
         this.bindEvents();
@@ -76,7 +83,7 @@ Now here is the conversation history:
     initializeElements() {
         // Panel elements
         this.loadingPanel = document.getElementById('loading-panel');
-        this.chatPanel = document.getElementById('chat-panel');
+        this.gameContainer = document.getElementById('game-container');
         this.compatibilityStatus = document.getElementById('compatibility-status');
         this.compatibilityWarning = document.getElementById('compatibility-warning');
         
@@ -85,27 +92,50 @@ Now here is the conversation history:
         this.progressFill = document.getElementById('progress-fill');
         this.progressText = document.getElementById('progress-text');
         
-        // Chat elements
-        this.chatHistory = document.getElementById('chat-history');
+        // Tab elements
+        this.tabButtons = document.querySelectorAll('.tab-button');
+        this.tabContents = document.querySelectorAll('.tab-content');
+        
+        // Game elements
+        this.statusMessage = document.getElementById('status-message');
+        this.speechContent = document.getElementById('speech-content');
         this.userInput = document.getElementById('user-input');
-        this.sendButton = document.getElementById('send-btn');
+        this.sendButton = document.getElementById('send-button');
+        this.stateIndicator = document.getElementById('state-indicator');
         this.restartButton = document.getElementById('restart-btn');
+        
+        // History elements
+        this.historyContent = document.getElementById('history-content');
+        this.clearHistoryButton = document.getElementById('clear-history');
     }
 
     bindEvents() {
-        // Chat events
+        // Tab events
+        this.tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                this.switchTab(button.dataset.tab);
+            });
+        });
+
+        // Game events
         this.sendButton.addEventListener('click', () => {
             this.sendMessage();
         });
 
         this.userInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && !this.isThinking) {
+            if (e.key === 'Enter' && !e.shiftKey && this.gameState.gameState !== 'munch_thinking') {
+                e.preventDefault();
                 this.sendMessage();
             }
         });
 
         this.restartButton.addEventListener('click', () => {
             this.restartConversation();
+        });
+
+        // History events
+        this.clearHistoryButton.addEventListener('click', () => {
+            this.clearHistory();
         });
     }
 
@@ -169,19 +199,19 @@ Now here is the conversation history:
         }
     }
 
-    switchToChat() {
+    switchToGame() {
         this.loadingPanel.style.display = 'none';
-        this.chatPanel.style.display = 'flex';
+        this.gameContainer.style.display = 'flex';
         this.restartButton.style.display = 'block';
         this.isLoading = false;
         
-        // Add initial message if chat history is empty
-        if (this.chatHistory.children.length === 0) {
-            const initialMessage = "A human is in me cave! Me is MUNCH, the big strong orc!";
-            this.addMessage(initialMessage, 'orc');
-            // Initialize conversation history with the initial message
+        // Initialize game state
+        this.updateGameInterface();
+        
+        // Initialize conversation history with the initial message
+        if (this.conversationHistory.length === 0) {
             this.conversationHistory = [
-                { role: 'assistant', content: initialMessage }
+                { role: 'assistant', content: this.gameState.munchLastWords }
             ];
         }
         
@@ -263,7 +293,7 @@ Now here is the conversation history:
     }
 
     showGame() {
-        this.switchToChat();
+        this.switchToGame();
     }
 
     showError(message) {
@@ -271,32 +301,137 @@ Now here is the conversation history:
         this.loadingStatus.style.color = '#ff4444';
     }
 
+    // Tab management
+    switchTab(tabName) {
+        // Update active tab button
+        this.tabButtons.forEach(button => {
+            button.classList.toggle('active', button.dataset.tab === tabName);
+        });
+
+        // Update active tab content
+        this.tabContents.forEach(content => {
+            content.classList.toggle('active', content.id === `${tabName}-tab`);
+        });
+
+        this.gameState.currentTab = tabName;
+
+        // Focus input when switching to game tab
+        if (tabName === 'game') {
+            this.userInput.focus();
+        }
+    }
+
+    // Game state management
+    updateGameState(newState) {
+        this.gameState.gameState = newState;
+        this.updateGameInterface();
+    }
+
+    updateGameInterface() {
+        // Update status message
+        this.statusMessage.textContent = this.gameState.statusMessage;
+        
+        // Update Munch's speech
+        this.speechContent.textContent = this.gameState.munchLastWords;
+        
+        // Update state indicator and controls
+        if (this.gameState.gameState === 'munch_thinking') {
+            this.stateIndicator.classList.add('thinking');
+            this.userInput.disabled = true;
+            this.sendButton.disabled = true;
+            this.sendButton.querySelector('.send-text').style.display = 'none';
+            this.sendButton.querySelector('.thinking-text').style.display = 'inline';
+            this.userInput.placeholder = 'Munch is thinking...';
+        } else {
+            this.stateIndicator.classList.remove('thinking');
+            this.userInput.disabled = false;
+            this.sendButton.disabled = false;
+            this.sendButton.querySelector('.send-text').style.display = 'inline';
+            this.sendButton.querySelector('.thinking-text').style.display = 'none';
+            this.userInput.placeholder = 'What do you say to Munch?';
+        }
+    }
+
+    updateStatusMessage(message) {
+        this.gameState.statusMessage = message;
+        this.statusMessage.textContent = message;
+    }
+
+    updateMunchSpeech(speech) {
+        this.gameState.munchLastWords = speech;
+        this.speechContent.textContent = speech;
+    }
+
+    addToHistory(userMessage, orcResponse) {
+        const historyEmpty = this.historyContent.querySelector('.history-empty');
+        if (historyEmpty) {
+            historyEmpty.remove();
+        }
+
+        const timestamp = new Date().toLocaleTimeString();
+        
+        // Add user message
+        const userDiv = document.createElement('div');
+        userDiv.className = 'history-message user';
+        userDiv.innerHTML = `
+            <div class="history-message-content"><strong>You:</strong> ${userMessage}</div>
+            <div class="history-message-time">${timestamp}</div>
+        `;
+        this.historyContent.appendChild(userDiv);
+
+        // Add orc response
+        const orcDiv = document.createElement('div');
+        orcDiv.className = 'history-message orc';
+        orcDiv.innerHTML = `
+            <div class="history-message-content"><strong>Munch:</strong> ${orcResponse}</div>
+            <div class="history-message-time">${timestamp}</div>
+        `;
+        this.historyContent.appendChild(orcDiv);
+
+        // Scroll to bottom
+        this.historyContent.scrollTop = this.historyContent.scrollHeight;
+    }
+
+    clearHistory() {
+        this.historyContent.innerHTML = `
+            <div class="history-empty">
+                <p>No conversation history yet. Start talking to Munch!</p>
+            </div>
+        `;
+    }
+
     async sendMessage() {
-        if (this.isLoading || this.isThinking) return;
+        if (this.isLoading || this.gameState.gameState === 'munch_thinking') return;
         
         const userMessage = this.userInput.value.trim();
         if (!userMessage) return;
 
-        // Add user message to UI and conversation history
-        this.addMessage(userMessage, 'user');
+        // Add user message to conversation history
         this.conversationHistory.push({ role: 'user', content: userMessage });
         this.userInput.value = '';
         
-        this.setThinking(true);
+        // Update game state to thinking
+        this.updateGameState('munch_thinking');
         
         try {
             const response = await this.generateResponse(userMessage);
-            this.addMessage(response, 'orc');
+            
+            // Update Munch's speech and add to history
+            this.updateMunchSpeech(response);
+            this.addToHistory(userMessage, response);
+            
             // Add assistant response to conversation history
             this.conversationHistory.push({ role: 'assistant', content: response });
         } catch (error) {
             console.error('Error generating response:', error);
             const errorMessage = 'GRRRR! Munch brain hurt! Try again!';
-            this.addMessage(errorMessage, 'orc');
+            this.updateMunchSpeech(errorMessage);
+            this.addToHistory(userMessage, errorMessage);
             this.conversationHistory.push({ role: 'assistant', content: errorMessage });
         }
         
-        this.setThinking(false);
+        // Update game state back to waiting
+        this.updateGameState('waiting_for_user');
     }
 
     async generateResponse(userMessage) {
@@ -348,43 +483,24 @@ Now here is the conversation history:
         return cleanedResponse;
     }
 
-    addMessage(message, sender) {
-        const messageElement = document.createElement('div');
-        messageElement.className = `message ${sender === 'user' ? 'user-message' : 'orc-message'}`;
-        
-        const messageContent = document.createElement('div');
-        messageContent.className = 'message-content';
-        messageContent.innerHTML = `<strong>${sender === 'user' ? 'You' : 'Munch'}:</strong> ${message}`;
-        
-        messageElement.appendChild(messageContent);
-        this.chatHistory.appendChild(messageElement);
-        this.chatHistory.scrollTop = this.chatHistory.scrollHeight;
-    }
 
-    setThinking(isThinking) {
-        this.isThinking = isThinking;
-        this.userInput.disabled = isThinking;
-        this.sendButton.disabled = isThinking;
-        
-        if (isThinking) {
-            this.userInput.placeholder = 'Munch is thinking...';
-        } else {
-            this.userInput.placeholder = 'Talk to Munch...';
-        }
-    }
 
     restartConversation() {
-        // Clear chat history
-        this.chatHistory.innerHTML = '';
+        // Reset game state
+        this.gameState.statusMessage = "You are in a cave. Munch the orc stands before you. He has an amulet and a large axe. He looks very angry.";
+        this.gameState.munchLastWords = "A human is in me cave! Me is MUNCH, the big strong orc!";
+        this.gameState.gameState = 'waiting_for_user';
         
-        // Add the initial orc greeting
-        const initialMessage = "A human is in me cave! Me is MUNCH, the big strong orc!";
-        this.addMessage(initialMessage, 'orc');
-        
-        // Reset conversation history to just the initial message
+        // Reset conversation history
         this.conversationHistory = [
-            { role: 'assistant', content: initialMessage }
+            { role: 'assistant', content: this.gameState.munchLastWords }
         ];
+        
+        // Clear history tab
+        this.clearHistory();
+        
+        // Update interface
+        this.updateGameInterface();
         
         // Reset input
         this.userInput.value = '';
