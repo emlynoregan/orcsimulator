@@ -690,11 +690,16 @@ Amulet:`;
             return `${role}: ${msg.content}`;
         }).join('\n');
 
+        const currentMood = this.gameState.munchMood;
+        const amuletAndMood = currentMood >= 6 ? "Munch becomes angrier if the human asks for the amulet" : "Munch doesn't mind if the human asks for the amulet";
+
         const moodPrompt = `Munch is an orc. Munch reacts emotionally to the user's message.
 
 If the user says mean things or violent things, Munch becomes angrier.
 If the user says kind things or things that make Munch happy, Munch becomes calmer.
 Otherwise, Munch's mood is unchanged.
+
+${amuletAndMood}
 
 After the user's last message, does Munch become:
 - More angry (angrier)
