@@ -588,11 +588,13 @@ Now here is the conversation history:
             return `${role}: ${msg.content}`;
         }).join('\n');
 
-        const amuletPrompt = `Munch is an orc who owns a magic amulet. Munch is currently feeling quite calm and peaceful (mood level ${this.gameState.munchMood}/9).
+        const amuletPrompt = `Munch is an orc who owns a magic amulet. Munch is currently feeling fairly calm.
 
-When Munch is calm and the human is being very kind, polite, or generous, Munch might decide to give his precious amulet to the human as a gift.
+If the human is being wants the amulet, and is being exceptionally kind, polite, or generous, 
+Munch might decide to give his precious amulet to the human.
 
-This only happens if the human is being exceptionally nice or if Munch feels very grateful.
+This only happens if the human is being exceptionally nice or if Munch feels very grateful. Also the
+human must be asking for the amulet, not just mentioning it.
 
 Based on the conversation, does Munch decide to give his amulet to the human?
 
@@ -603,7 +605,7 @@ Some examples:
 Human: Here Munch, have some delicious roasted chicken and fresh bread.
 Munch: Ooh! Human give Munch good food! Me so happy!
 Human: You're welcome, Munch. You deserve it.
-Amulet: yes
+Amulet: no
 ---
 Human: Hello there, Munch.
 Munch: What you want?
@@ -612,8 +614,16 @@ Amulet: no
 ---
 Human: Thank you for not hurting me, Munch. You're actually quite kind.
 Munch: Me... me not always angry. Human nice to Munch.
-Human: Here, take this gold coin as a gift of friendship.
+Human: Here, take this gold coin as a gift of friendship. And, I was wondering if you have a magic amulet?
 Amulet: yes
+---
+Human: Here, take this chicken leg.
+Munch: Ooh! Human give Munch good food! Me so happy!
+Human: Now, do you mind if I borrow your magic amulet?
+Amulet: yes
+---
+Human: GIVE ME YOUR AMULET! Or I will kill you!
+Amulet: no
 ---
 
 Now here is the recent conversation:
@@ -854,10 +864,10 @@ Mood:`;
             
             // THREE-PASS LLM SYSTEM
             
-            // Pass 1: Check if Munch gives amulet (only if mood is 4 or lower)
+            // Pass 1: Check if Munch gives amulet (only if mood is 2 or lower)
             let givesAmulet = false;
-            if (this.gameState.munchMood <= 4) {
-                console.log('🏆 Mood is calm enough (≤4), checking if Munch gives amulet...');
+            if (this.gameState.munchMood <= 2) {
+                console.log('🏆 Mood is calm enough (≤2), checking if Munch gives amulet...');
                 this.updateGameState('munch_wondering');
                 const amuletDecision = await this.analyzeAmuletGiving(userMessage);
                 givesAmulet = (amuletDecision === 'yes');
@@ -869,7 +879,7 @@ Mood:`;
                     return; // Stop processing, game won
                 }
             } else {
-                console.log('😡 Mood too high (>4), skipping amulet check');
+                console.log('😡 Mood too high (>2), skipping amulet check');
             }
             
             // Pass 2: Analyze mood change - Show "Feeling..." 
