@@ -212,9 +212,6 @@ Now here is the conversation history:
         this.restartButton.style.display = 'block';
         this.isLoading = false;
         
-        // Initialize game state
-        this.updateGameInterface();
-        
         // Initialize conversation history with the initial message
         if (this.conversationHistory.length === 0) {
             this.conversationHistory = [
@@ -228,6 +225,9 @@ Now here is the conversation history:
                 { content: this.gameState.munchLastWords, type: 'orc-message' }
             ];
         }
+        
+        // Initialize game state (this will call updateConversationDisplay)
+        this.updateGameInterface();
         
         this.userInput.focus();
     }
