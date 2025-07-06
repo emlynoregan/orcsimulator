@@ -34,6 +34,16 @@ body {
     font-size: 2rem;
     color: #ff6b35;
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.header-logo {
+    height: 1.8rem;
+    width: 1.8rem;
+    object-fit: contain;
+    filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.7));
 }
 
 .header-controls {
@@ -402,6 +412,11 @@ body {
     
     .app-header h1 {
         font-size: 1.5rem;
+    }
+    
+    .header-logo {
+        height: 1.5rem;
+        width: 1.5rem;
     }
     
     .loading-content h2 {
