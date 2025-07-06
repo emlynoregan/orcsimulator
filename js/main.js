@@ -129,6 +129,7 @@ Now here is the conversation history:
 
         this.userInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter' && !e.shiftKey && 
+                this.gameState.gameState !== 'munch_wondering' && 
                 this.gameState.gameState !== 'munch_feeling' && 
                 this.gameState.gameState !== 'munch_thinking') {
                 e.preventDefault();
@@ -352,8 +353,17 @@ Now here is the conversation history:
         this.updateMoodVisuals();
         
         // Update state indicator and controls
-        if (this.gameState.gameState === 'munch_feeling') {
-            // Pass 1: Mood analysis
+        if (this.gameState.gameState === 'munch_wondering') {
+            // Pass 1: Amulet analysis
+            this.stateIndicator.classList.add('thinking');
+            this.userInput.disabled = true;
+            this.sendButton.disabled = true;
+            this.sendButton.querySelector('.send-text').style.display = 'none';
+            this.sendButton.querySelector('.thinking-text').style.display = 'inline';
+            this.sendButton.querySelector('.thinking-text').textContent = 'Wondering...';
+            this.userInput.placeholder = 'Munch is wondering about something...';
+        } else if (this.gameState.gameState === 'munch_feeling') {
+            // Pass 2: Mood analysis
             this.stateIndicator.classList.add('thinking');
             this.userInput.disabled = true;
             this.sendButton.disabled = true;
@@ -362,7 +372,7 @@ Now here is the conversation history:
             this.sendButton.querySelector('.thinking-text').textContent = 'Feeling...';
             this.userInput.placeholder = 'Munch is processing your words...';
         } else if (this.gameState.gameState === 'munch_thinking') {
-            // Pass 2: Response generation
+            // Pass 3: Response generation
             this.stateIndicator.classList.add('thinking');
             this.userInput.disabled = true;
             this.sendButton.disabled = true;
@@ -370,8 +380,8 @@ Now here is the conversation history:
             this.sendButton.querySelector('.thinking-text').style.display = 'inline';
             this.sendButton.querySelector('.thinking-text').textContent = 'Thinking...';
             this.userInput.placeholder = 'Munch is thinking of a response...';
-        } else if (this.gameState.gameState === 'game_over') {
-            // Game over state - keep everything disabled
+        } else if (this.gameState.gameState === 'game_over' || this.gameState.gameState === 'victory') {
+            // Game over states - keep everything disabled
             this.userInput.disabled = true;
             this.sendButton.disabled = true;
         } else {
@@ -571,6 +581,98 @@ Now here is the conversation history:
         return messages[moodLevel] || "Munch stares at you.";
     }
 
+    async analyzeAmuletGiving(userMessage) {
+        // Build recent conversation history (last 3 exchanges)
+        const recentHistory = this.conversationHistory.slice(-6).map(msg => {
+            const role = msg.role === 'user' ? 'Human' : 'Munch';
+            return `${role}: ${msg.content}`;
+        }).join('\n');
+
+        const amuletPrompt = `Munch is an orc who owns a magic amulet. Munch is currently feeling quite calm and peaceful (mood level ${this.gameState.munchMood}/9).
+
+When Munch is calm and the human is being very kind, polite, or generous, Munch might decide to give his precious amulet to the human as a gift.
+
+This only happens if the human is being exceptionally nice or if Munch feels very grateful.
+
+Based on the conversation, does Munch decide to give his amulet to the human?
+
+Reply with only one word: "yes" or "no"
+
+Some examples:
+---
+Human: Here Munch, have some delicious roasted chicken and fresh bread.
+Munch: Ooh! Human give Munch good food! Me so happy!
+Human: You're welcome, Munch. You deserve it.
+Amulet: yes
+---
+Human: Hello there, Munch.
+Munch: What you want?
+Human: I was wondering if you have a magic amulet?
+Amulet: no
+---
+Human: Thank you for not hurting me, Munch. You're actually quite kind.
+Munch: Me... me not always angry. Human nice to Munch.
+Human: Here, take this gold coin as a gift of friendship.
+Amulet: yes
+---
+
+Now here is the recent conversation:
+---
+${recentHistory}
+Amulet:`;
+
+        console.log('🏆 AMULET ANALYSIS - PASS 1 (Wondering...)');
+        console.log('📝 Amulet Analysis Prompt:');
+        console.log(amuletPrompt);
+        console.log('⚙️ Current mood level:', this.gameState.munchMood);
+
+        try {
+            const rawResponse = await this.wllama.createCompletion(amuletPrompt, {
+                nPredict: 10,
+                sampling: {
+                    temp: 0.4,
+                    top_k: 15,
+                    top_p: 0.8,
+                },
+            });
+
+            console.log('🤖 Raw LLM Response:', `"${rawResponse}"`);
+            
+            const cleanedResponse = rawResponse.toLowerCase().trim();
+            console.log('🧹 Cleaned Response:', `"${cleanedResponse}"`);
+            
+            // Validate the response
+            const validResponses = ['yes', 'no'];
+            let finalResponse = cleanedResponse;
+            
+            if (!validResponses.includes(cleanedResponse)) {
+                console.warn('⚠️ Invalid amulet response, checking if it contains valid words...');
+                // Try to extract valid response from the text
+                for (const validWord of validResponses) {
+                    if (cleanedResponse.includes(validWord)) {
+                        finalResponse = validWord;
+                        console.log(`✅ Found "${validWord}" in response, using that`);
+                        break;
+                    }
+                }
+                
+                // If still no match, default to no
+                if (!validResponses.includes(finalResponse)) {
+                    finalResponse = 'no';
+                    console.warn('❌ No valid response found, defaulting to "no"');
+                }
+            }
+            
+            console.log('✅ Final Amulet Decision:', finalResponse);
+            console.log('---');
+            
+            return finalResponse;
+        } catch (error) {
+            console.error('❌ Error analyzing amulet giving:', error);
+            return 'no';
+        }
+    }
+
     async analyzeMood(userMessage) {
         // Build recent conversation history (last 3 exchanges)
         const recentHistory = this.conversationHistory.slice(-6).map(msg => {
@@ -612,7 +714,7 @@ Now here is the recent conversation:
 ${recentHistory}
 Mood:`;
 
-        console.log('🎯 MOOD ANALYSIS - PASS 1 (Feeling...)');
+        console.log('🎯 MOOD ANALYSIS - PASS 2 (Feeling...)');
         console.log('📝 Mood Analysis Prompt:');
         console.log(moodPrompt);
         console.log('⚙️ Current mood level:', this.gameState.munchMood);
@@ -694,25 +796,46 @@ Mood:`;
         this.gameState.gameState = 'game_over';
         this.gameState.isAlive = false;
         
+        // Ensure mood is set to maximum (9) for death
+        this.gameState.munchMood = 9;
+        
         // Update UI to show death
-                    this.addMessageToConversation("GRAAAHHH! MUNCH SMASH PUNY HUMAN!", 'orc-message');
+        this.addMessageToConversation("GRAAAHHH! MUNCH SMASH PUNY HUMAN!", 'orc-message');
         this.updateStatusMessage("GAME OVER - Munch's axe cleaves through the air!");
+        
+        // Update mood visuals to show 9/9
+        this.updateMoodVisuals();
+        this.updatePortraitImage();
         
         // Disable input
         this.userInput.disabled = true;
         this.sendButton.disabled = true;
         this.sendButton.innerHTML = '<span style="color: #cc3333;">💀 GAME OVER 💀</span>';
+    }
+
+    triggerVictorySequence() {
+        this.gameState.gameState = 'victory';
+        this.gameState.isAlive = false; // Game is over, but victoriously
         
-        // Show restart option
-        setTimeout(() => {
-            if (confirm("You have been slain by Munch! Would you like to restart?")) {
-                this.restartConversation();
-            }
-        }, 2000);
+        // Set mood to very calm (0) for victory
+        this.gameState.munchMood = 0;
+        
+        // Update UI to show victory
+        this.addMessageToConversation("Here, human friend. Munch give you magic amulet! You be good to Munch, so Munch be good to you!", 'orc-message');
+        this.updateStatusMessage("VICTORY! - Munch hands you his precious amulet with a gentle smile!");
+        
+        // Update mood visuals to show 0/9 (very calm)
+        this.updateMoodVisuals();
+        this.updatePortraitImage();
+        
+        // Disable input
+        this.userInput.disabled = true;
+        this.sendButton.disabled = true;
+        this.sendButton.innerHTML = '<span style="color: #33cc33;">🏆 VICTORY! 🏆</span>';
     }
 
     async sendMessage() {
-        if (this.isLoading || this.gameState.gameState === 'munch_feeling' || this.gameState.gameState === 'munch_thinking' || !this.gameState.isAlive) return;
+        if (this.isLoading || this.gameState.gameState === 'munch_wondering' || this.gameState.gameState === 'munch_feeling' || this.gameState.gameState === 'munch_thinking' || !this.gameState.isAlive) return;
         
         const userMessage = this.userInput.value.trim();
         if (!userMessage) return;
@@ -729,9 +852,27 @@ Mood:`;
             // Add user message to conversation display
             this.addMessageToConversation(userMessage, 'user-message');
             
-            // TWO-PASS LLM SYSTEM
+            // THREE-PASS LLM SYSTEM
             
-            // Pass 1: Analyze mood change - Show "Feeling..." 
+            // Pass 1: Check if Munch gives amulet (only if mood is 4 or lower)
+            let givesAmulet = false;
+            if (this.gameState.munchMood <= 4) {
+                console.log('🏆 Mood is calm enough (≤4), checking if Munch gives amulet...');
+                this.updateGameState('munch_wondering');
+                const amuletDecision = await this.analyzeAmuletGiving(userMessage);
+                givesAmulet = (amuletDecision === 'yes');
+                console.log(`🎁 Amulet Decision: ${amuletDecision} (gives: ${givesAmulet})`);
+                
+                if (givesAmulet) {
+                    console.log('🏆 VICTORY! Munch gives the amulet!');
+                    this.triggerVictorySequence();
+                    return; // Stop processing, game won
+                }
+            } else {
+                console.log('😡 Mood too high (>4), skipping amulet check');
+            }
+            
+            // Pass 2: Analyze mood change - Show "Feeling..." 
             this.updateGameState('munch_feeling');
             const moodChange = await this.analyzeMood(userMessage);
             const oldMood = this.gameState.munchMood;
@@ -746,7 +887,7 @@ Mood:`;
                 return; // Stop processing if player is dead
             }
             
-            // Pass 2: Generate response with mood context - Show "Thinking..."
+            // Pass 3: Generate response with mood context - Show "Thinking..."
             this.updateGameState('munch_thinking');
             const response = await this.generateResponse(userMessage);
             
@@ -793,7 +934,7 @@ Current mood: Munch is ${moodDescription} (level ${this.gameState.munchMood}/9).
         
         const fullPrompt = `${enhancedSystemPrompt}\n\n${conversationContext}`;
 
-        console.log('💬 RESPONSE GENERATION - PASS 2 (Thinking...)');
+        console.log('💬 RESPONSE GENERATION - PASS 3 (Thinking...)');
         console.log('📝 Enhanced System Prompt with Mood:');
         console.log(enhancedSystemPrompt);
         console.log('🎭 Current mood description:', moodDescription);
