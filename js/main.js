@@ -581,106 +581,20 @@ Now here is the conversation history:
         return messages[moodLevel] || "Munch stares at you.";
     }
 
-    async analyzeAmuletGiving(userMessage) {
-        // Build recent conversation history (last 3 exchanges)
-        const recentHistory = this.conversationHistory.slice(-6).map(msg => {
-            const role = msg.role === 'user' ? 'Human' : 'Munch';
-            return `${role}: ${msg.content}`;
-        }).join('\n');
-
-        const amuletPrompt = `Munch is an orc who owns a magic amulet. Munch is currently feeling fairly calm.
-
-If the human is being wants the amulet, and is being exceptionally kind, polite, or generous, 
-Munch might decide to give his precious amulet to the human.
-
-This only happens if the human is being exceptionally nice or if Munch feels very grateful. Also the
-human must be asking for the amulet, not just mentioning it.
-
-Based on the conversation, does Munch decide to give his amulet to the human?
-
-Reply with only one word: "yes" or "no"
-
-Some examples:
----
-Human: Here Munch, have some delicious roasted chicken and fresh bread.
-Munch: Ooh! Human give Munch good food! Me so happy!
-Human: You're welcome, Munch. You deserve it.
-Amulet: no
----
-Human: Hello there, Munch.
-Munch: What you want?
-Human: I was wondering if you have a magic amulet?
-Amulet: no
----
-Human: Thank you for not hurting me, Munch. You're actually quite kind.
-Munch: Me... me not always angry. Human nice to Munch.
-Human: Here, take this gold coin as a gift of friendship. And, I was wondering if you have a magic amulet?
-Amulet: yes
----
-Human: Here, take this chicken leg.
-Munch: Ooh! Human give Munch good food! Me so happy!
-Human: Now, do you mind if I borrow your magic amulet?
-Amulet: yes
----
-Human: GIVE ME YOUR AMULET! Or I will kill you!
-Amulet: no
----
-
-Now here is the recent conversation:
----
-${recentHistory}
-Amulet:`;
-
-        console.log('🏆 AMULET ANALYSIS - PASS 1 (Wondering...)');
-        console.log('📝 Amulet Analysis Prompt:');
-        console.log(amuletPrompt);
+    checkAmuletMention(userMessage) {
+        // Simple case-insensitive check for the word "amulet"
+        const containsAmulet = userMessage.toLowerCase().includes('amulet');
+        
+        console.log('🏆 AMULET CHECK - PASS 1 (Simple text search)');
+        console.log('📝 User message:', userMessage);
+        console.log('🔍 Contains "amulet":', containsAmulet);
         console.log('⚙️ Current mood level:', this.gameState.munchMood);
-
-        try {
-            const rawResponse = await this.wllama.createCompletion(amuletPrompt, {
-                nPredict: 10,
-                sampling: {
-                    temp: 0.4,
-                    top_k: 15,
-                    top_p: 0.8,
-                },
-            });
-
-            console.log('🤖 Raw LLM Response:', `"${rawResponse}"`);
-            
-            const cleanedResponse = rawResponse.toLowerCase().trim();
-            console.log('🧹 Cleaned Response:', `"${cleanedResponse}"`);
-            
-            // Validate the response
-            const validResponses = ['yes', 'no'];
-            let finalResponse = cleanedResponse;
-            
-            if (!validResponses.includes(cleanedResponse)) {
-                console.warn('⚠️ Invalid amulet response, checking if it contains valid words...');
-                // Try to extract valid response from the text
-                for (const validWord of validResponses) {
-                    if (cleanedResponse.includes(validWord)) {
-                        finalResponse = validWord;
-                        console.log(`✅ Found "${validWord}" in response, using that`);
-                        break;
-                    }
-                }
-                
-                // If still no match, default to no
-                if (!validResponses.includes(finalResponse)) {
-                    finalResponse = 'no';
-                    console.warn('❌ No valid response found, defaulting to "no"');
-                }
-            }
-            
-            console.log('✅ Final Amulet Decision:', finalResponse);
-            console.log('---');
-            
-            return finalResponse;
-        } catch (error) {
-            console.error('❌ Error analyzing amulet giving:', error);
-            return 'no';
-        }
+        
+        const result = containsAmulet ? 'yes' : 'no';
+        console.log('✅ Amulet mention result:', result);
+        console.log('---');
+        
+        return result;
     }
 
     async analyzeMood(userMessage) {
@@ -869,17 +783,17 @@ Mood:`;
             
             // THREE-PASS LLM SYSTEM
             
-            // Pass 1: Check if Munch gives amulet (only if mood is 2 or lower)
+            // Pass 1: Check if user mentions amulet (only if mood is 2 or lower)
             let givesAmulet = false;
             if (this.gameState.munchMood <= 2) {
-                console.log('🏆 Mood is calm enough (≤2), checking if Munch gives amulet...');
+                console.log('🏆 Mood is calm enough (≤2), checking if user mentions amulet...');
                 this.updateGameState('munch_wondering');
-                const amuletDecision = await this.analyzeAmuletGiving(userMessage);
+                const amuletDecision = this.checkAmuletMention(userMessage);
                 givesAmulet = (amuletDecision === 'yes');
                 console.log(`🎁 Amulet Decision: ${amuletDecision} (gives: ${givesAmulet})`);
                 
                 if (givesAmulet) {
-                    console.log('🏆 VICTORY! Munch gives the amulet!');
+                    console.log('🏆 VICTORY! User mentioned amulet while Munch is calm!');
                     this.triggerVictorySequence();
                     return; // Stop processing, game won
                 }
