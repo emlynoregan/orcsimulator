@@ -154,6 +154,24 @@ python cdn_proxy.py           # CDN proxy (separate terminal)
 - Check browser console for errors (F12)
 - Try a different browser
 
+### **Firefox Users (Important!)**
+Firefox has stricter security policies that can prevent the AI model from loading. To fix this:
+
+**Option A - Use a different browser:**
+- Chrome, Edge, or Safari work best
+
+**Option B - Run on local server:**
+1. Open terminal/command prompt in the game folder
+2. Run: `python -m http.server 8000` (Python 3) or `python -m SimpleHTTPServer 8000` (Python 2)
+3. Open `http://localhost:8000` in Firefox
+4. **DO NOT** open the HTML file directly
+
+**Option C - Firefox CORS fix:**
+1. Type `about:config` in Firefox address bar
+2. Search for `security.fileuri.strict_origin_policy`
+3. Set it to `false`
+4. Restart Firefox
+
 ## 🎯 **Development Status**
 
 ### **✅ Completed Features**

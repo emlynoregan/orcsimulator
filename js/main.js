@@ -75,9 +75,13 @@ Now here is the conversation history:
         
         this.initializeElements();
         this.bindEvents();
-        this.checkBrowserCompatibility();
+        this.initializeAsync();
+    }
+
+    async initializeAsync() {
+        await this.checkBrowserCompatibility();
         
-        // Start loading immediately if browser is compatible
+        // Start loading after compatibility check with a brief delay
         setTimeout(() => {
             this.startLoading();
         }, 1000);
@@ -147,8 +151,13 @@ Now here is the conversation history:
         });
     }
 
-    checkBrowserCompatibility() {
-        const compatibility = this.getBrowserCompatibility();
+    async checkBrowserCompatibility() {
+        // Show checking status while testing
+        this.compatibilityStatus.innerHTML = `
+            <span class="status-checking">🔍 Checking Browser...</span>
+        `;
+        
+        const compatibility = await this.getBrowserCompatibility();
         
         if (compatibility.isCompatible) {
             this.showCompatibleStatus();
@@ -157,7 +166,7 @@ Now here is the conversation history:
         }
     }
 
-    getBrowserCompatibility() {
+    async getBrowserCompatibility() {
         const issues = [];
         let isCompatible = true;
 
@@ -172,6 +181,32 @@ Now here is the conversation history:
             issues.push('SharedArrayBuffer not available (may affect performance)');
         }
 
+        // Firefox WebAssembly compatibility test
+        if (navigator.userAgent.includes('Firefox')) {
+            try {
+                // Test Firefox's ability to load WebAssembly from external sources
+                // This tests the exact HuggingFace CORS issue the user experienced
+                const testResponse = await fetch('https://huggingface.co/Qwen/Qwen2-0.5B-Instruct-GGUF/resolve/main/qwen2-0_5b-instruct-q4_0.gguf', {
+                    method: 'HEAD',
+                    signal: AbortSignal.timeout(5000) // 5 second timeout
+                });
+                
+                if (!testResponse.ok) {
+                    throw new Error('HuggingFace model not accessible');
+                }
+                
+                // Additional test: Try to load wllama library 
+                await fetch('https://cdn.jsdelivr.net/npm/@wllama/wllama@2.3.2/esm/index.js', {
+                    method: 'HEAD',
+                    signal: AbortSignal.timeout(3000)
+                });
+                
+            } catch (error) {
+                issues.push('Firefox cannot load WebAssembly models from HuggingFace - use Chrome/Edge for best compatibility');
+                isCompatible = false;
+            }
+        }
+
         return { isCompatible, issues };
     }
 
@@ -184,22 +219,39 @@ Now here is the conversation history:
 
     showIncompatibleStatus(issues) {
         this.compatibilityStatus.innerHTML = `
-            <span class="status-incompatible">❌ Browser Issues</span>
+            <span class="status-incompatible">❌ Browser Incompatible</span>
         `;
         this.compatibilityStatus.classList.add('status-incompatible');
         
-        this.compatibilityWarning.innerHTML = `
-            <strong>Issues:</strong> ${issues.join(', ')}
-        `;
-        this.compatibilityWarning.style.display = 'inline';
+        // Check if this is a Firefox WebAssembly issue
+        const isFirefoxWasmIssue = issues.some(issue => issue.includes('Firefox cannot load WebAssembly'));
         
-        // Still allow loading but show warning
-        this.updateLoadingStatus('Browser compatibility issues detected - may not work properly', 0);
+        if (isFirefoxWasmIssue) {
+            this.compatibilityWarning.innerHTML = `
+                <strong>Firefox WebAssembly Compatibility Issue:</strong><br>
+                <div style="margin-top: 8px; font-size: 14px;">
+                    Firefox has stricter CORS policies that prevent loading AI models from HuggingFace.<br><br>
+                    <strong>Recommended Solutions:</strong><br>
+                    • <strong>Use Chrome/Edge/Safari</strong> (easiest fix - works immediately)<br>
+                    • <strong>Firefox users:</strong> Try disabling Enhanced Tracking Protection for this site<br>
+                    • <strong>Advanced:</strong> <code>about:config</code> → search for <code>security.tls.insecure_fallback_hosts</code>
+                </div>
+            `;
+        } else {
+            this.compatibilityWarning.innerHTML = `
+                <strong>Issues:</strong> ${issues.join(', ')}
+            `;
+        }
+        
+        this.compatibilityWarning.style.display = 'block';
+        
+        // Don't allow loading for incompatible browsers
+        this.updateLoadingStatus('Browser not supported - see solutions above', 0);
     }
 
-    startLoading() {
+    async startLoading() {
         // Only start if browser is compatible
-        const compatibility = this.getBrowserCompatibility();
+        const compatibility = await this.getBrowserCompatibility();
         if (compatibility.isCompatible) {
             this.loadModel();
         } else {
